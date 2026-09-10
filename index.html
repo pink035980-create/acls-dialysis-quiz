@@ -86,6 +86,9 @@
           <h2>🎉 測驗完成！成績分析報告</h2>
           <p id="result-student-info">學員：- | 員編：-</p>
         </div>
+        <div id="google-sheet-status-notice" style="display:none; background:#ecfdf5; border:1.5px solid #10b981; color:#065f46; padding:0.75rem 1rem; border-radius:8px; margin-bottom:1.2rem; font-weight:600; text-align:center;">
+          ☁️ ✅ 成績已自動即時同步回傳至科室 Google 試算表教學管理總表！
+        </div>
 
         <div class="result-score-box">
           <div class="score-circle">
@@ -131,6 +134,62 @@
         <p>提供專屬派卷網址生成、同仁作答紀錄檢視、Google Gemini 1.5 臨床弱點智能診斷報告，以及全班成績 CSV/JSON 一鍵匯出。</p>
       </div>
 
+            <!-- Google Sheets Auto-Collection Card -->
+      <div class="card" style="border: 2px solid #10b981; background: #f0fdf4; margin-bottom: 1.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.6rem;">
+          <h3 style="margin:0; color:#065f46;">📊 Google 試算表雲端成績自動收集設定</h3>
+          <span id="sheet-sync-badge" style="background:#e2e8f0; color:#475569; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.85rem; font-weight:700;">⚪ 尚未設定（僅存本機）</span>
+        </div>
+        <p style="font-size:0.92rem; color:#166534; margin-bottom:1rem; line-height:1.6;">
+          <strong>🎯 阿長最愛的自動彙整功能：</strong>設定完成後，全科同仁在手機上只要點擊「交卷」，姓名、員編、100 分總成績、六大急症雷達分析與錯題，將在 1 秒內<strong>自動寫入您的 Google 試算表</strong>，阿長打開試算表就能即時看見全科作答狀況與排行榜！
+        </p>
+
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="google-sheet-url" style="font-weight:700; color:#166534;">Google Apps Script 網頁應用程式網址 (Web App URL)：</label>
+            <input type="text" id="google-sheet-url" placeholder="https://script.google.com/macros/s/AKfycb.../exec" style="background:#fff; border:1px solid #10b981;">
+          </div>
+          <div class="form-group" style="display:flex; gap:0.5rem; align-items:flex-end;">
+            <button class="btn btn-success" onclick="saveGoogleSheetUrl()">💾 儲存並啟用</button>
+            <button class="btn btn-secondary" onclick="testGoogleSheetSync()">🧪 傳送測試資料</button>
+          </div>
+        </div>
+
+        <details style="margin-top:1rem; background:#ffffff; padding:0.8rem 1rem; border-radius:6px; border:1px solid #a7f3d0;">
+          <summary style="font-weight:700; color:#047857; cursor:pointer; font-size:0.95rem;">👉 點此展開「30 秒 Google 試算表串接教學」與「10 行小腳本」</summary>
+          <div style="margin-top:0.8rem; font-size:0.9rem; color:#1e293b; line-height:1.65;">
+            <ol style="padding-left:1.2rem; margin-bottom:0.8rem;">
+              <li>打開您的 <strong>Google 雲端硬碟</strong> ➔ 新增一張 <strong>Google 試算表</strong>（命名為例如：<code>ACLS 透析急症測驗同仁成績總表</code>）。</li>
+              <li>點擊頂部選單的 <strong>「擴充功能」</strong> ➔ <strong>「Apps Script」</strong>。</li>
+              <li>把裡面的內容清空，<strong>貼上下方的 10 行小腳本</strong>，按 💾 儲存。</li>
+              <li>點擊右上角藍色 <strong>「部署」</strong> ➔ <strong>「新部署」</strong>：
+                <ul>
+                  <li>種類選擇：<strong>網頁應用程式 (Web app)</strong></li>
+                  <li>誰可以存取 (Who has access)：請務必選 <strong>「所有人 (Anyone)」</strong></li>
+                </ul>
+              </li>
+              <li>點擊「部署」➔ 複製產生的 <strong>「網頁應用程式網址」</strong> 貼回上方格子，按「💾 儲存並啟用」即大功告成！</li>
+            </ol>
+            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:0.8rem; position:relative;">
+              <strong style="color:#0f172a;">📋 複製這段 Apps Script 腳本：</strong>
+              <pre style="margin:0.5rem 0 0 0; font-family:Consolas, monospace; font-size:0.82rem; overflow-x:auto; background:#1e293b; color:#f8fafc; padding:0.75rem; border-radius:4px;">function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["繳卷時間", "同仁姓名", "員編/單位", "測驗得分", "答對題數", "錯題清單", "VF/pVT", "PSVT", "Afib/Afl", "Brady/AVB", "高血鉀", "透析急症"]);
+    sheet.getRange(1, 1, 1, 12).setFontWeight("bold").setBackground("#d1fae5");
+  }
+  var data = JSON.parse(e.postData.contents);
+  sheet.appendRow([
+    data.timestamp, data.studentName, data.studentId, data.choiceScore,
+    data.correctCount, data.wrongList, data.vfScore, data.psvtScore,
+    data.afibScore, data.bradyScore, data.hyperKScore, data.dialysisScore
+  ]);
+  return ContentService.createTextOutput(JSON.stringify({result: "success"})).setMimeType(ContentService.MimeType.JSON);
+}</pre>
+            </div>
+          </div>
+        </details>
+      </div>
       <!-- Teacher Controls Card -->
       <div class="card admin-settings-card">
         <h3>⚙️ API 設定與派卷工具</h3>
@@ -152,11 +211,19 @@
         <div class="dispatch-box">
           <h4>🔗 專屬派卷網址（同仁如何打開測驗）</h4>
           
+          <div class="form-group" style="margin-bottom:1rem; background:#ecfdf5; padding:0.85rem; border-radius:8px; border:1.5px solid #10b981;">
+            <label style="color:#065f46; font-size:1rem;"><strong>🌟 雲端正式派卷網址（推薦！同仁手機 LINE、4G/5G、院外隨時可點開測驗）：</strong></label>
+            <div class="input-with-button" style="margin-top:0.35rem;">
+              <input type="text" id="gh-pages-share-link" value="https://pink035980-create.github.io/acls-dialysis-quiz/" readonly style="background:#ffffff; font-weight:700; color:#065f46; border:1px solid #10b981;">
+              <button class="btn btn-success" onclick="copyGhPagesShareLink()">📋 複製正式公開網址傳 LINE</button>
+            </div>
+          </div>
+
           <div class="form-group" style="margin-bottom:0.85rem;">
-            <label><strong>📶 同一 Wi-Fi / 醫院區域網路派卷網址（同仁手機或平板連線同個 Wi-Fi 直接開啟）：</strong></label>
+            <label><strong>📶 同一 Wi-Fi / 醫院區域網路派卷網址（同仁手機連線同個 Wi-Fi 開啟）：</strong></label>
             <div class="input-with-button">
-              <input type="text" id="wifi-share-link" value="http://192.168.11.50:8088/" readonly style="background:#f0fdf4; font-weight:700; color:#166534;">
-              <button class="btn btn-success" onclick="copyWifiShareLink()">📋 複製區網 Wi-Fi 網址</button>
+              <input type="text" id="wifi-share-link" value="http://192.168.11.50:8088/" readonly style="background:#f8fafc; color:#334155;">
+              <button class="btn btn-secondary" onclick="copyWifiShareLink()">📋 複製區網網址</button>
             </div>
           </div>
 

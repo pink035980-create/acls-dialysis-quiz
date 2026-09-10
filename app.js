@@ -1705,3 +1705,118 @@ function clearAllSubmissions() {
     alert("已清空紀錄。");
   }
 }
+// -------------------------------------------------------------
+// GOOGLE SHEETS CLOUD SYNC ENGINE
+// -------------------------------------------------------------
+function saveGoogleSheetUrl() {
+  const url = document.getElementById("google-sheet-url").value.trim();
+  if (url) {
+    localStorage.setItem("acls_google_sheet_url", url);
+    updateSheetSyncBadge(true);
+    alert("✅ Google 試算表雲端同步網址已儲存！同仁繳卷將自動寫入該試算表。");
+  } else {
+    localStorage.removeItem("acls_google_sheet_url");
+    updateSheetSyncBadge(false);
+    alert("已清除 Google 試算表設定，切換為本機儲存模式。");
+  }
+}
+
+function updateSheetSyncBadge(enabled) {
+  const badge = document.getElementById("sheet-sync-badge");
+  if (!badge) return;
+  if (enabled) {
+    badge.innerText = "🟢 即時同步已啟用";
+    badge.style.background = "#10b981";
+    badge.style.color = "#ffffff";
+  } else {
+    badge.innerText = "⚪ 尚未設定（僅存本機）";
+    badge.style.background = "#e2e8f0";
+    badge.style.color = "#475569";
+  }
+}
+
+function copyGhPagesShareLink() {
+  const input = document.getElementById("gh-pages-share-link");
+  if (input) {
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+      alert("✅ 已複製正式公開測驗網址！可直接貼在 LINE 傳給阿長與同仁。\n\n網址：" + input.value);
+    }).catch(() => {
+      alert("請手動複製網址：" + input.value);
+    });
+  }
+}
+
+function testGoogleSheetSync() {
+  const sheetUrl = localStorage.getItem("acls_google_sheet_url") || (document.getElementById("google-sheet-url") ? document.getElementById("google-sheet-url").value.trim() : "");
+  if (!sheetUrl) {
+    alert("請先填寫並儲存 Google Apps Script 網頁應用程式網址！");
+    return;
+  }
+
+  const testPayload = {
+    timestamp: new Date().toLocaleString("zh-TW"),
+    studentName: "測試同仁",
+    studentId: "TEST-001",
+    choiceScore: 100,
+    correctCount: 20,
+    wrongList: "無 (測試滿分)",
+    vfScore: "3/3",
+    psvtScore: "3/3",
+    afibScore: "3/3",
+    bradyScore: "3/3",
+    hyperKScore: "4/4",
+    dialysisScore: "4/4"
+  };
+
+  fetch(sheetUrl, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(testPayload)
+  }).then(() => {
+    alert("🎉 測試資料已送出！請至您的 Google 試算表查看是否新增了一筆「測試同仁」紀錄。");
+  }).catch(err => {
+    alert("連線時發生錯誤：" + err);
+  });
+}
+
+function sendSubmissionToGoogleSheet(record) {
+  const sheetUrl = localStorage.getItem("acls_google_sheet_url");
+  if (!sheetUrl) return;
+
+  const wrongList = [];
+  QUESTIONS.forEach((q, idx) => {
+    if (userAnswers[q.id] !== q.answer) {
+      wrongList.push("第" + (idx + 1) + "題");
+    }
+  });
+
+  const payload = {
+    timestamp: record.submittedAt,
+    studentName: record.studentName,
+    studentId: record.studentId,
+    choiceScore: record.choiceScore,
+    correctCount: record.choiceScore / 5,
+    wrongList: wrongList.join(", ") || "無 (滿分)",
+    vfScore: (record.categoryStats.vf_pvt ? record.categoryStats.vf_pvt.correct + "/" + record.categoryStats.vf_pvt.total : "-"),
+    psvtScore: (record.categoryStats.psvt ? record.categoryStats.psvt.correct + "/" + record.categoryStats.psvt.total : "-"),
+    afibScore: (record.categoryStats.afib_afl ? record.categoryStats.afib_afl.correct + "/" + record.categoryStats.afib_afl.total : "-"),
+    bradyScore: (record.categoryStats.brady_avb ? record.categoryStats.brady_avb.correct + "/" + record.categoryStats.brady_avb.total : "-"),
+    hyperKScore: (record.categoryStats.hyperkalemia ? record.categoryStats.hyperkalemia.correct + "/" + record.categoryStats.hyperkalemia.total : "-"),
+    dialysisScore: (record.categoryStats.dialysis_complications ? record.categoryStats.dialysis_complications.correct + "/" + record.categoryStats.dialysis_complications.total : "-")
+  };
+
+  fetch(sheetUrl, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  }).then(() => {
+    console.log("Uploaded to Google Sheet successfully");
+    const notice = document.getElementById("google-sheet-status-notice");
+    if (notice) notice.style.display = "block";
+  }).catch(err => {
+    console.warn("Google Sheet sync error:", err);
+  });
+}
