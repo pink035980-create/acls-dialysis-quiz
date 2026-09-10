@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACLS 2025/2026 最新指引 × 血液透析與高血鉀急症互動複習與手寫測驗系統</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="brand">
+        <span class="badge-acls">AHA 2025/2026 ACLS</span>
+        <h1>透析與高血鉀急症 × 經典心電圖口訣大禮包</h1>
+        <p class="subtitle">台灣急救教育推廣協會 / 聯委會核心題庫邏輯設計</p>
+      </div>
+      <div class="header-controls">
+        <div id="exam-timer" class="timer-display" style="display: none;">
+          <span class="timer-icon">⏱️</span>
+          <span id="timer-text">45:00</span>
+        </div>
+        <nav class="tab-nav">
+          <button class="nav-btn active" onclick="switchView('mnemonics-view')">📖 6大心電圖口訣</button>
+          <button class="nav-btn" onclick="switchView('quiz-view')">📝 20題急症測驗</button>
+          <button class="nav-btn" onclick="switchView('teacher-view')">👨‍⚕️ 教師批改後台</button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- VIEW 1: 6 Classic ECG Mnemonics -->
+    <section id="mnemonics-view" class="view-panel active">
+      <div class="panel-intro">
+        <h2>【第一部分：ACLS 必考的 6 張經典心電圖判讀口訣】</h2>
+        <p>嚴格對齊 2025/2026 AHA ACLS 指引最新變革（含不穩定 Afib/Afl 上調 200J、高血鉀跳停下 CPR 高於一切、楊桃致命毒素等）。點擊卡片可即時於示波器觀察動態波形。</p>
+      </div>
+
+      <div class="mnemonics-grid" id="mnemonics-container">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- VIEW 2: 20-Question Exam View -->
+    <section id="quiz-view" class="view-panel">
+      <!-- User Info Card -->
+      <div id="student-entry-card" class="card entry-card">
+        <h3>🧑‍⚕️ 測驗基本資料登入</h3>
+        <p>本測驗共 20 題（含 17 題選擇題與 3 題手寫用藥處方題），交卷後選擇題即時算分並提供 6 大心律不整弱點雷達圖，手寫題將傳送至教師後台進行 AI 視覺批改。</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="student-name">同仁姓名 / 醫師 / 護理師姓名：<span class="required">*</span></label>
+            <input type="text" id="student-name" placeholder="請輸入姓名（如：陳大明 醫師）" required>
+          </div>
+          <div class="form-group">
+            <label for="student-id">員工編號 / 單位代碼：<span class="required">*</span></label>
+            <input type="text" id="student-id" placeholder="請輸入員編或單位（如：HD-8802）" required>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-large" onclick="startExam()">🚀 開始作答（啟動 45 分鐘倒數）</button>
+      </div>
+
+      <!-- Actual Quiz Container -->
+      <div id="quiz-content" style="display: none;">
+        <div class="quiz-header-bar">
+          <span id="quiz-progress-text">作答進度：0 / 20 題</span>
+          <div class="quiz-actions-quick">
+            <button class="btn btn-secondary btn-sm" onclick="exportOfflineJSON()">💾 離線備份（JSON）</button>
+          </div>
+        </div>
+
+        <div id="questions-list">
+          <!-- Injected via JS -->
+        </div>
+
+        <div class="submit-bar">
+          <button class="btn btn-success btn-large" onclick="confirmSubmitQuiz()">📤 正式交卷並查看成績分析</button>
+        </div>
+      </div>
+
+      <!-- Result & Radar Chart Panel -->
+      <div id="quiz-result-card" class="card result-card" style="display: none;">
+        <div class="result-header">
+          <h2>🎉 測驗完成！成績分析報告</h2>
+          <p id="result-student-info">學員：- | 員編：-</p>
+        </div>
+
+        <div class="result-score-box">
+          <div class="score-circle">
+            <span class="score-number" id="final-choice-score">0</span>
+            <span class="score-label">測驗總得分 (滿分 100)</span>
+          </div>
+          <div class="handwrite-notice">
+            <h4>🎯 測驗即時評分與臨床解析</h4>
+            <p>全卷 20 題（含 17 題單選題與 3 題臨床急症複選組合題）已全數自動評分完成！每題 5 分。下方提供詳細答題診斷、6 大主題雷達圖分析與 AHA 2025/2026 最新指引詳解。</p>
+          </div>
+        </div>
+
+        <div class="radar-section">
+          <h3>📊 6 大心律不整與透析急症弱點雷達圖</h3>
+          <p>依據您本次作答表現統計各主題掌握度，雷達向外延伸代表觀念越紮實：</p>
+          <div class="chart-wrapper">
+            <canvas id="radarChart"></canvas>
+          </div>
+        </div>
+
+        <div class="action-buttons-group">
+          <button class="btn btn-success" onclick="exportStudentCSV()">📥 下載個人成績單 (Excel 檔 - 直接點擊開啟)</button>
+          <button class="btn btn-primary" onclick="printStudentCertificate()">🖨️ 列印 / 另存為合格證明 (PDF / 網頁)</button>
+          <label class="btn btn-secondary" style="margin:0; cursor:pointer;">
+            📂 線上開啟已下載的 JSON 檔
+            <input type="file" accept=".json" style="display:none;" onchange="viewUploadedJSON(this)">
+          </label>
+          <button class="btn btn-secondary" onclick="exportStudentJSON()">💾 備份代碼 (JSON)</button>
+          <button class="btn btn-secondary" onclick="resetQuiz()">🔄 重新測驗</button>
+        </div>
+
+        <div class="explanations-review" id="review-explanations">
+          <h3>🔍 20 題深度臨床題解與 AHA 2025 解析</h3>
+          <!-- Review questions will be listed here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: Teacher Admin & AI Grading View -->
+    <section id="teacher-view" class="view-panel">
+      <div class="panel-intro">
+        <h2>👨‍⚕️ 教師管理後台與 AI 臨床診斷中心</h2>
+        <p>提供專屬派卷網址生成、同仁作答紀錄檢視、Google Gemini 1.5 臨床弱點智能診斷報告，以及全班成績 CSV/JSON 一鍵匯出。</p>
+      </div>
+
+      <!-- Teacher Controls Card -->
+      <div class="card admin-settings-card">
+        <h3>⚙️ API 設定與派卷工具</h3>
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label for="gemini-api-key">Google Gemini API Key（支援 1.5 Flash / Pro 智能診斷）：</label>
+            <input type="password" id="gemini-api-key" placeholder="貼上 AI Studio 取得之 Gemini API Key (AIzaSy...)">
+            <small style="display:block; margin-top:0.3rem;">
+              🔑 <strong>如何取得？</strong> 請至 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary-color); font-weight:700; text-decoration:underline;">Google AI Studio 官網 (點此開啟)</a> 免費申請（登入 Google 帳號 ➔ 點「Get API key」複製貼上）。<br>
+              💡 <em>小提醒：完全免費！若暫不設定也不影響任何測驗、評分、心電圖示波器與 Excel 匯出功能。</em>
+            </small>
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button class="btn btn-secondary" onclick="saveApiKey()">💾 儲存金鑰</button>
+          </div>
+        </div>
+
+        <div class="dispatch-box">
+          <h4>🔗 專屬派卷網址（同仁如何打開測驗）</h4>
+          
+          <div class="form-group" style="margin-bottom:0.85rem;">
+            <label><strong>📶 同一 Wi-Fi / 醫院區域網路派卷網址（同仁手機或平板連線同個 Wi-Fi 直接開啟）：</strong></label>
+            <div class="input-with-button">
+              <input type="text" id="wifi-share-link" value="http://192.168.11.50:8088/" readonly style="background:#f0fdf4; font-weight:700; color:#166534;">
+              <button class="btn btn-success" onclick="copyWifiShareLink()">📋 複製區網 Wi-Fi 網址</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label><strong>💻 本機測試網址（僅限您目前這台電腦自己測試）：</strong></label>
+            <div class="input-with-button">
+              <input type="text" id="share-link-input" readonly>
+              <button class="btn btn-secondary" onclick="copyShareLink()">📋 複製本機網址</button>
+            </div>
+          </div>
+
+          <div style="background:#fffbeb; border:1px solid #fef3c7; border-radius:6px; padding:0.75rem; margin-top:0.75rem; font-size:0.88rem; color:#92400e;">
+            ⚠️ <strong>為什麼之前傳 localhost 給別人打不開？</strong><br>
+            <code>localhost</code> 代表「這台電腦自己」，傳給同事或手機點開時會連線到同事自己的設備，因此連線失敗。<br>
+            👉 <strong>請複製上方的「同 Wi-Fi 派卷網址」發送給同事</strong>！只要手機連在相同 Wi-Fi 或院內網路上即可順利打開。<br>
+            🌐 <em>若同事在家中或使用 4G/5G 行動網路（非同一個 Wi-Fi），我們可一鍵為您發布至免費雲端公開網址（如 GitHub Pages / Vercel）。</em>
+          </div>
+        </div>
+
+        <div class="export-box">
+          <h4>📊 全班成績報表匯出與備份讀取</h4>
+          <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center;">
+            <button class="btn btn-success" onclick="exportTeacherCSV()">📥 匯出全班成績表 (Excel CSV - 點擊直接開啟)</button>
+            <label class="btn btn-primary" style="margin:0; cursor:pointer;">
+              📂 線上讀取已下載的 JSON 備份檔
+              <input type="file" accept=".json" style="display:none;" onchange="viewUploadedJSON(this)">
+            </label>
+            <button class="btn btn-secondary" onclick="exportTeacherJSON()">💾 匯出系統備份檔 (JSON)</button>
+            <button class="btn btn-danger btn-sm" onclick="clearAllSubmissions()">🗑️ 清空所有紀錄</button>
+          </div>
+          <small style="display:block; margin-top:0.5rem; color:#64748b;">
+            💡 提示：若您之前已下載過 <code>.json</code> 檔案，不需要打開 Cloud Code，直接點擊上方「📂 線上讀取已下載的 JSON 備份檔」選取檔案，即可在網頁中完整閱覽！
+          </small>
+        </div>
+      </div>
+
+      <!-- Submissions List -->
+      <div class="card submissions-card">
+        <div class="submissions-header">
+          <h3>📋 同仁測驗作答清單 (<span id="submission-count">0</span> 人繳卷)</h3>
+          <button class="btn btn-primary btn-sm" onclick="batchGradeAll()">⚡ 一鍵呼叫 Gemini AI 生成班級弱點綜合報告</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" id="submissions-table">
+            <thead>
+              <tr>
+                <th>繳卷時間</th>
+                <th>同仁姓名</th>
+                <th>員編 / 單位</th>
+                <th>測驗總分 (滿分100)</th>
+                <th>答對題數</th>
+                <th>評定狀態</th>
+                <th>操作與診斷</th>
+              </tr>
+            </thead>
+            <tbody id="submissions-tbody">
+              <!-- Injected via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal for Grading Single Handwrite Submission -->
+  <div id="grading-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">手寫處方檢視與 AI 視覺批改</h3>
+        <span class="modal-close" onclick="closeGradingModal()">&times;</span>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Injected via JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeGradingModal()">關閉</button>
+        <button class="btn btn-primary" onclick="saveManualGrading()">💾 儲存成績與評語</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Viewing Uploaded JSON Data -->
+  <div id="json-viewer-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 820px;">
+      <div class="modal-header">
+        <h3 id="json-viewer-title">📄 已下載 JSON 檔案內容完整解讀</h3>
+        <span class="modal-close" onclick="closeJsonViewerModal()">&times;</span>
+      </div>
+      <div class="modal-body" id="json-viewer-body">
+        <!-- Injected via JS -->
+      </div>
+      <div class="modal-footer" id="json-viewer-footer">
+        <button class="btn btn-secondary" onclick="closeJsonViewerModal()">關閉視窗</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>ACLS 2025/2026 指引 × 血液透析與高血鉀急症測驗系統 | 本系統專供醫護教育與臨床複習模擬使用，非真實診療指示</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
