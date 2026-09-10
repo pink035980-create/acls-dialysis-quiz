@@ -1,10 +1,14 @@
 # 專案交接紀錄 (Handoff)
 
-- **目前狀態**：✅ 已完成雲端 GitHub Pages 部署，提供公開 HTTPS 網址供阿長與同仁直接測驗。
+- **目前狀態**：🎉 專案全功能建置與雲端部署完工收工，可供全體同仁於手機與電腦端穩定使用。
 - **做到哪裡**：
-  1. 解決手機外部行動網路（4G/5G）無法連線私人內網 IP (192.168.11.50) 的問題。
-  2. 專案已建立為 GitHub 公開 Repository：`pink035980-create/acls-dialysis-quiz`。
-  3. 已啟用 GitHub Pages，網址：`https://pink035980-create.github.io/acls-dialysis-quiz/`。
-- **下一步**：同仁實測反饋蒐集、依科室教學需求增補特殊題型。
-- **注意事項**：API Key 為使用者客戶端本地端存儲，無任何後端洩漏風險；GitHub Pages 靜態代碼完全安全。
-- **最後更新**：2026-09-10 22:20 by Antigravity@侯玉琴 (push狀態: 已推送到 origin/main)
+  1. **測驗前台交付**：發布至 GitHub Pages (`https://pink035980-create.github.io/acls-dialysis-quiz/`)，解決行動網路與醫院內網隔離無法開啟之問題。
+  2. **自動成績後台**：實作 Google 試算表 (Apps Script) 雲端成績自動接收機制，同仁手機交卷 1 秒內自動彙整姓名、員編、得分、錯題與六維度指標。
+  3. **教學工具完整**：內建 Excel 匯出、證書列印、連續 ECG 示波器與 Gemini 2.5 智慧臨床診斷。
+- **下一步**：
+  1. 供阿長與科室護理同仁於臨床實測作答。
+  2. 若有科室特殊 SOP 或案例，可於 `app.js` 的 `QUESTIONS` 題庫中增修。
+- **注意事項**：
+  1. 系統純前端運作，不儲存任何個人敏感密鑰，Google Sheets Web App 串接安全性高。
+  2. 如需更換或綁定科室固定 Google 試算表，可在管理後台直接輸入並儲存。
+- **最後更新**：2026-09-10 22:35 by Antigravity@侯玉琴 (push狀態: 準備推送到 origin/main)
