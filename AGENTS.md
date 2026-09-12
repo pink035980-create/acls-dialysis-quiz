@@ -6,14 +6,14 @@
 ## 🌐 線上部署與管理網址
 - **線上測驗網站 (GitHub Pages)**：https://pink035980-create.github.io/acls-dialysis-quiz/
 - **專案原始碼倉庫 (GitHub Repo)**：https://github.com/pink035980-create/acls-dialysis-quiz
-- **第二大腦工作流程筆記**：`~/second-brain/RDQ 需求探索技能/專案工作流程.md`
+- **第二大腦工作流程筆記**：`~/second-brain/acls-dialysis-quiz/專案工作流程.md`
 
 ## 📊 同步層級表
 | 層級 | 管道 | 目標 / 狀態 | 連結 |
 |---|---|---|---|
 | L1 | 本地檔案 | ✅ 全數完成 | `C:\Users\pink0\.gemini\antigravity\scratch\acls-dialysis-quiz` |
 | L2 | GitHub | ✅ 已推送到 pink035980-create | `https://github.com/pink035980-create/acls-dialysis-quiz` |
-| L3 | Obsidian 第二大腦 | ✅ 筆記已同步完成 | `~/second-brain/RDQ 需求探索技能/專案工作流程.md` |
+| L3 | Obsidian 第二大腦 | ✅ 筆記已同步完成 | `~/second-brain/acls-dialysis-quiz/專案工作流程.md` |
 
 ## 🗺️ 路線圖進度
 - [x] 6 大 ACLS 核心心律不整好記押韻口訣（融入 2025 新指引 Afib 200J、高血鉀處置）
