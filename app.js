@@ -394,12 +394,125 @@ document.addEventListener("DOMContentLoaded", () => {
   renderQuestions();
   initOscilloscopes();
   loadSavedApiKey();
+  updateTeacherNavBtnState();
   updateTeacherSubmissionsTable();
   updateShareLink();
 });
 
+// Teacher Authentication State
+let isTeacherAuthenticated = sessionStorage.getItem("acls_teacher_auth") === "true";
+let teacherSearchQuery = "";
+let teacherFilterStatus = "all";
+let teacherSortMode = "time-desc";
+
+function handleTeacherNavClick() {
+  if (isTeacherAuthenticated) {
+    switchView("teacher-view");
+  } else {
+    openTeacherLoginModal();
+  }
+}
+
+function openTeacherLoginModal() {
+  const modal = document.getElementById("teacher-login-modal");
+  const input = document.getElementById("teacher-password-input");
+  const err = document.getElementById("teacher-login-error");
+  if (err) err.style.display = "none";
+  if (input) input.value = "";
+  if (modal) modal.style.display = "flex";
+  setTimeout(() => { if (input) input.focus(); }, 100);
+}
+
+function closeTeacherLoginModal() {
+  const modal = document.getElementById("teacher-login-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function verifyTeacherLogin() {
+  const input = document.getElementById("teacher-password-input");
+  const err = document.getElementById("teacher-login-error");
+  const entered = input ? input.value.trim() : "";
+  const currentPassword = localStorage.getItem("acls_teacher_password") || "acls2026";
+
+  if (entered === currentPassword) {
+    isTeacherAuthenticated = true;
+    sessionStorage.setItem("acls_teacher_auth", "true");
+    closeTeacherLoginModal();
+    updateTeacherNavBtnState();
+    switchView("teacher-view");
+  } else {
+    if (err) {
+      err.innerText = "❌ 密碼錯誤！請輸入正確管理密碼（預設：acls2026）。";
+      err.style.display = "block";
+    }
+    if (input) input.focus();
+  }
+}
+
+function updateTeacherNavBtnState() {
+  const btn = document.getElementById("teacher-nav-btn");
+  if (!btn) return;
+  if (isTeacherAuthenticated) {
+    btn.innerHTML = "👨‍⚕️ 教師管理後台";
+  } else {
+    btn.innerHTML = "🔒 教師管理後台";
+  }
+}
+
+function logoutTeacher() {
+  if (confirm("確定要登出教師管理模式嗎？登出後需重新輸入密碼才能再次存取後台。")) {
+    isTeacherAuthenticated = false;
+    sessionStorage.removeItem("acls_teacher_auth");
+    updateTeacherNavBtnState();
+    switchView("mnemonics-view");
+    alert("已成功登出教師管理模式。");
+  }
+}
+
+function openChangePasswordModal() {
+  const modal = document.getElementById("change-password-modal");
+  const p1 = document.getElementById("new-teacher-password");
+  const p2 = document.getElementById("confirm-teacher-password");
+  const err = document.getElementById("change-pwd-error");
+  if (p1) p1.value = "";
+  if (p2) p2.value = "";
+  if (err) err.style.display = "none";
+  if (modal) modal.style.display = "flex";
+}
+
+function closeChangePasswordModal() {
+  const modal = document.getElementById("change-password-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function saveNewTeacherPassword() {
+  const p1 = document.getElementById("new-teacher-password").value.trim();
+  const p2 = document.getElementById("confirm-teacher-password").value.trim();
+  const err = document.getElementById("change-pwd-error");
+
+  if (p1.length < 4) {
+    err.innerText = "❌ 新密碼長度至少需 4 碼！";
+    err.style.display = "block";
+    return;
+  }
+  if (p1 !== p2) {
+    err.innerText = "❌ 兩次輸入的密碼不相符，請重新確認！";
+    err.style.display = "block";
+    return;
+  }
+
+  localStorage.setItem("acls_teacher_password", p1);
+  closeChangePasswordModal();
+  alert("🎉 教師管理密碼已成功更新！請妥善保存新密碼。");
+}
+
 // View switching
 function switchView(viewId) {
+  if (viewId === "teacher-view" && !isTeacherAuthenticated) {
+    openTeacherLoginModal();
+    return;
+  }
+
   document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
 
@@ -1439,37 +1552,205 @@ function copyWifiShareLink() {
   }
 }
 
+// Search, Filter and Sorting Handlers
+function handleTeacherSearch() {
+  const input = document.getElementById("teacher-search-input");
+  teacherSearchQuery = input ? input.value.trim().toLowerCase() : "";
+  updateTeacherSubmissionsTable();
+}
+
+function handleTeacherFilter() {
+  const select = document.getElementById("teacher-status-filter");
+  teacherFilterStatus = select ? select.value : "all";
+  updateTeacherSubmissionsTable();
+}
+
+function handleTeacherSort() {
+  const select = document.getElementById("teacher-sort-select");
+  teacherSortMode = select ? select.value : "time-desc";
+  updateTeacherSubmissionsTable();
+}
+
+function resetTeacherFilters() {
+  teacherSearchQuery = "";
+  teacherFilterStatus = "all";
+  teacherSortMode = "time-desc";
+  const sInput = document.getElementById("teacher-search-input");
+  const sFilter = document.getElementById("teacher-status-filter");
+  const sSort = document.getElementById("teacher-sort-select");
+  if (sInput) sInput.value = "";
+  if (sFilter) sFilter.value = "all";
+  if (sSort) sSort.value = "time-desc";
+  updateTeacherSubmissionsTable();
+}
+
 function updateTeacherSubmissionsTable() {
   const tbody = document.getElementById("submissions-tbody");
   const countSpan = document.getElementById("submission-count");
   if (!tbody) return;
 
-  countSpan.innerText = submissions.length;
+  // 1. Calculate Overall Statistics across all submissions
+  const totalSubmissions = submissions.length;
+  let totalScoreSum = 0;
+  let passCount = 0;
+  const questionWrongCounts = {};
 
-  if (submissions.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:2rem;">目前尚無同仁繳卷紀錄</td></tr>`;
+  submissions.forEach(sub => {
+    totalScoreSum += (sub.choiceScore || 0);
+    if ((sub.choiceScore || 0) >= 80) passCount++;
+
+    QUESTIONS.forEach((q, idx) => {
+      if (sub.answers && sub.answers[q.id] !== q.answer) {
+        const qKey = `第${idx + 1}題`;
+        questionWrongCounts[qKey] = (questionWrongCounts[qKey] || 0) + 1;
+      }
+    });
+  });
+
+  const avgScore = totalSubmissions > 0 ? Math.round(totalScoreSum / totalSubmissions) : 0;
+  const passRate = totalSubmissions > 0 ? Math.round((passCount / totalSubmissions) * 100) : 0;
+
+  // Find most frequent wrong question
+  let topWrongQ = "尚無數據";
+  let maxWrongCount = 0;
+  Object.keys(questionWrongCounts).forEach(qKey => {
+    if (questionWrongCounts[qKey] > maxWrongCount) {
+      maxWrongCount = questionWrongCounts[qKey];
+      topWrongQ = `${qKey} (${maxWrongCount}人錯)`;
+    }
+  });
+
+  // Update stat widgets
+  const statTotal = document.getElementById("stat-total-students");
+  const statAvg = document.getElementById("stat-avg-score");
+  const statPass = document.getElementById("stat-pass-rate");
+  const statTopQ = document.getElementById("stat-top-wrong-q");
+
+  if (statTotal) statTotal.innerText = `${totalSubmissions} 人`;
+  if (statAvg) statAvg.innerText = `${avgScore} 分`;
+  if (statPass) statPass.innerText = `${passRate}%`;
+  if (statTopQ) statTopQ.innerText = totalSubmissions > 0 ? topWrongQ : "尚無數據";
+
+  // 2. Filter Submissions
+  let filtered = [...submissions];
+
+  if (teacherSearchQuery) {
+    filtered = filtered.filter(sub => {
+      const name = (sub.studentName || "").toLowerCase();
+      const id = (sub.studentId || "").toLowerCase();
+      return name.includes(teacherSearchQuery) || id.includes(teacherSearchQuery);
+    });
+  }
+
+  if (teacherFilterStatus === "pass") {
+    filtered = filtered.filter(sub => (sub.choiceScore || 0) >= 80);
+  } else if (teacherFilterStatus === "fail") {
+    filtered = filtered.filter(sub => (sub.choiceScore || 0) < 80);
+  } else if (teacherFilterStatus === "perfect") {
+    filtered = filtered.filter(sub => (sub.choiceScore || 0) === 100);
+  }
+
+  // 3. Sort Submissions
+  filtered.sort((a, b) => {
+    if (teacherSortMode === "time-asc") {
+      return (a.id || "").localeCompare(b.id || "");
+    } else if (teacherSortMode === "score-desc") {
+      return (b.choiceScore || 0) - (a.choiceScore || 0);
+    } else if (teacherSortMode === "score-asc") {
+      return (a.choiceScore || 0) - (b.choiceScore || 0);
+    } else {
+      // default: time-desc
+      return (b.id || "").localeCompare(a.id || "");
+    }
+  });
+
+  countSpan.innerText = filtered.length;
+  const hint = document.getElementById("search-result-hint");
+  if (hint) {
+    hint.innerText = (filtered.length === totalSubmissions) ? "顯示全部同仁繳卷名單" : `依搜尋條件篩選出 ${filtered.length} 筆（全班共 ${totalSubmissions} 人）`;
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:2rem;">查無符合篩選條件的同仁紀錄</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = submissions.map(sub => {
-    const totalScore = sub.choiceScore;
+  tbody.innerHTML = filtered.map(sub => {
+    const totalScore = sub.choiceScore || 0;
     const correctCount = Math.round(totalScore / 5);
-    const statusBadge = `<span style="color:var(--success-color); font-weight:700;">✅ 已自動批閱</span>`;
+    const isPass = totalScore >= 80;
+    const isPerfect = totalScore === 100;
+
+    let statusBadge = `<span style="background:#dcfce7; color:#166534; padding:0.2rem 0.55rem; border-radius:12px; font-size:0.82rem; font-weight:700;">✅ 及格</span>`;
+    if (isPerfect) {
+      statusBadge = `<span style="background:#fef3c7; color:#92400e; padding:0.2rem 0.55rem; border-radius:12px; font-size:0.82rem; font-weight:700;">🏆 滿分</span>`;
+    } else if (!isPass) {
+      statusBadge = `<span style="background:#fee2e2; color:#991b1b; padding:0.2rem 0.55rem; border-radius:12px; font-size:0.82rem; font-weight:700;">⚠️ 待加強</span>`;
+    }
+
+    const scoreColor = isPass ? "var(--primary-color)" : "var(--danger-color)";
 
     return `
       <tr>
-        <td>${sub.submittedAt}</td>
-        <td><strong>${sub.studentName}</strong></td>
-        <td>${sub.studentId}</td>
-        <td><strong style="color:var(--primary-color); font-size:1.15rem;">${totalScore}</strong> / 100</td>
-        <td>${correctCount} / 20 題</td>
+        <td style="font-size:0.9rem; color:#64748b;">${sub.submittedAt}</td>
+        <td><strong style="font-size:1.02rem; color:#1e293b;">${sub.studentName}</strong></td>
+        <td><span style="font-family:monospace; background:#f1f5f9; padding:0.15rem 0.4rem; border-radius:4px;">${sub.studentId}</span></td>
+        <td><strong style="color:${scoreColor}; font-size:1.2rem;">${totalScore}</strong> <span style="font-size:0.85rem; color:#64748b;">/ 100</span></td>
+        <td><strong>${correctCount}</strong> / 20 題</td>
         <td>${statusBadge}</td>
         <td>
-          <button class="btn btn-primary btn-sm" onclick="openGradingModal('${sub.id}')">🔍 檢視診斷 / AI分析</button>
+          <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="viewSubmissionDetail('${sub.id}')" style="padding:0.35rem 0.65rem; font-size:0.82rem;">📋 檢視作答</button>
+            <button class="btn btn-primary btn-sm" onclick="openGradingModal('${sub.id}')" style="padding:0.35rem 0.65rem; font-size:0.82rem;">⚡ AI 診斷</button>
+          </div>
         </td>
       </tr>
     `;
   }).join("");
+}
+
+// Submission Detail Modal
+function viewSubmissionDetail(subId) {
+  const sub = submissions.find(s => s.id === subId);
+  if (!sub) return;
+
+  const modal = document.getElementById("submission-detail-modal");
+  const title = document.getElementById("detail-modal-title");
+  const body = document.getElementById("detail-modal-body");
+  const summary = document.getElementById("detail-modal-summary");
+
+  title.innerText = `📋 同仁作答明細：${sub.studentName} (${sub.studentId})`;
+  const totalScore = sub.choiceScore || 0;
+  const correctCount = Math.round(totalScore / 5);
+  summary.innerHTML = `繳卷時間：${sub.submittedAt} | 總分：<strong style="color:${totalScore >= 80 ? '#10b981' : '#ef4444'}; font-size:1.15rem;">${totalScore}</strong> 分 (答對 ${correctCount} / 20 題)`;
+
+  body.innerHTML = QUESTIONS.map((q, idx) => {
+    const userAns = (sub.answers && sub.answers[q.id]) || "未作答";
+    const isCorrect = userAns === q.answer;
+    const cardClass = isCorrect ? "correct" : "incorrect";
+    const badgeText = isCorrect ? "✅ 答對 (+5分)" : `❌ 答錯 (選擇: ${userAns})`;
+
+    return `
+      <div class="detail-q-card ${cardClass}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem; flex-wrap:wrap; gap:0.4rem;">
+          <h4 style="margin:0; font-size:1rem; color:#0f172a;">第 ${idx + 1} 題：${q.title}</h4>
+          <span style="font-weight:700; font-size:0.85rem; color:${isCorrect ? '#166534' : '#991b1b'};">${badgeText}</span>
+        </div>
+        <p style="margin:0.3rem 0; font-size:0.92rem; color:#334155;"><strong>標準答案：</strong><span style="color:#047857; font-weight:700;">${q.answer}</span></p>
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem 0.8rem; margin-top:0.5rem; font-size:0.88rem; color:#475569; line-height:1.5;">
+          <strong>💡 臨床詳解與 AHA 2025 指引依據：</strong><br>
+          ${q.rationale || q.sampleAnswer || ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  modal.style.display = "flex";
+}
+
+function closeSubmissionDetailModal() {
+  const modal = document.getElementById("submission-detail-modal");
+  if (modal) modal.style.display = "none";
 }
 
 let currentGradingSubId = null;

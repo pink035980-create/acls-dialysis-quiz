@@ -24,7 +24,7 @@
         <nav class="tab-nav">
           <button class="nav-btn active" onclick="switchView('mnemonics-view')">📖 6大心電圖口訣</button>
           <button class="nav-btn" onclick="switchView('quiz-view')">📝 20題急症測驗</button>
-          <button class="nav-btn" onclick="switchView('teacher-view')">👨‍⚕️ 教師批改後台</button>
+          <button class="nav-btn" id="teacher-nav-btn" onclick="handleTeacherNavClick()">🔒 教師管理後台</button>
         </nav>
       </div>
     </div>
@@ -129,9 +129,41 @@
 
     <!-- VIEW 3: Teacher Admin & AI Grading View -->
     <section id="teacher-view" class="view-panel">
+      <!-- Admin Top Action Bar -->
+      <div class="admin-top-bar" style="display:flex; justify-content:space-between; align-items:center; background:#1e293b; color:#fff; padding:0.85rem 1.25rem; border-radius:8px; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <span style="background:#10b981; color:#fff; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.85rem; font-weight:700; letter-spacing:0.03em;">🟢 教師管理模式已解鎖</span>
+          <span style="font-size:0.95rem; color:#cbd5e1;">阿長與教學負責人控制台</span>
+        </div>
+        <div style="display:flex; gap:0.6rem; align-items:center;">
+          <button class="btn btn-secondary btn-sm" onclick="openChangePasswordModal()" style="background:#334155; border-color:#475569; color:#f8fafc;">🔑 變更管理密碼</button>
+          <button class="btn btn-danger btn-sm" onclick="logoutTeacher()">🚪 登出教師模式</button>
+        </div>
+      </div>
+
       <div class="panel-intro">
-        <h2>👨‍⚕️ 教師管理後台與 AI 臨床診斷中心</h2>
-        <p>提供專屬派卷網址生成、同仁作答紀錄檢視、Google Gemini 1.5 臨床弱點智能診斷報告，以及全班成績 CSV/JSON 一鍵匯出。</p>
+        <h2>👨‍⚕️ 教師管理後台與全科成績整理中心</h2>
+        <p>提供同仁作答即時搜尋、及格篩選、科室盲點大數據看板、Google 試算表自動同步，以及 Google Gemini 2.5 臨床弱點診斷報告。</p>
+      </div>
+
+      <!-- Class Big Data Stats Dashboard -->
+      <div class="stats-overview-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1.1rem; border-left:4px solid #3b82f6; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          <div style="font-size:0.85rem; color:#64748b; font-weight:600;">👥 總測驗人次</div>
+          <div id="stat-total-students" style="font-size:1.9rem; font-weight:800; color:#1e293b; margin-top:0.25rem;">0 人</div>
+        </div>
+        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1.1rem; border-left:4px solid #10b981; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          <div style="font-size:0.85rem; color:#64748b; font-weight:600;">📊 科室平均成績</div>
+          <div id="stat-avg-score" style="font-size:1.9rem; font-weight:800; color:#10b981; margin-top:0.25rem;">0 分</div>
+        </div>
+        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1.1rem; border-left:4px solid #f59e0b; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          <div style="font-size:0.85rem; color:#64748b; font-weight:600;">🎯 及格率 (≥80分)</div>
+          <div id="stat-pass-rate" style="font-size:1.9rem; font-weight:800; color:#f59e0b; margin-top:0.25rem;">0%</div>
+        </div>
+        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1.1rem; border-left:4px solid #ef4444; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          <div style="font-size:0.85rem; color:#64748b; font-weight:600;">⚠️ 科室最常錯盲點題目</div>
+          <div id="stat-top-wrong-q" style="font-size:1.05rem; font-weight:700; color:#ef4444; margin-top:0.35rem; line-height:1.4;">尚無數據</div>
+        </div>
       </div>
 
             <!-- Google Sheets Auto-Collection Card -->
@@ -260,11 +292,40 @@
         </div>
       </div>
 
-      <!-- Submissions List -->
+      <!-- Submissions List with Search & Filters -->
       <div class="card submissions-card">
-        <div class="submissions-header">
-          <h3>📋 同仁測驗作答清單 (<span id="submission-count">0</span> 人繳卷)</h3>
-          <button class="btn btn-primary btn-sm" onclick="batchGradeAll()">⚡ 一鍵呼叫 Gemini AI 生成班級弱點綜合報告</button>
+        <div class="submissions-header" style="flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
+          <div>
+            <h3 style="margin:0;">📋 同仁測驗作答清單 (<span id="submission-count">0</span> 筆紀錄)</h3>
+            <span id="search-result-hint" style="font-size:0.85rem; color:#64748b;">顯示符合條件的成績清單</span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="batchGradeAll()">⚡ 一鍵呼叫 Gemini AI 生成科室弱點綜合報告</button>
+        </div>
+
+        <!-- Search & Filter Toolbar -->
+        <div class="search-filter-toolbar" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.85rem 1rem; margin-bottom:1.25rem; display:flex; flex-wrap:wrap; gap:0.85rem; align-items:center;">
+          <div style="flex:2; min-width:220px;">
+            <input type="text" id="teacher-search-input" placeholder="🔍 即時搜尋同仁姓名、員工編號或單位..." oninput="handleTeacherSearch()" style="width:100%; padding:0.55rem 0.85rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.95rem; outline:none;">
+          </div>
+          <div style="flex:1; min-width:160px;">
+            <select id="teacher-status-filter" onchange="handleTeacherFilter()" style="width:100%; padding:0.55rem 0.85rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.95rem; background:#fff; cursor:pointer;">
+              <option value="all">🎯 全部成績 (不限)</option>
+              <option value="pass">✅ 及格名單 (≥80分)</option>
+              <option value="fail">⚠️ 待補考名單 (&lt;80分)</option>
+              <option value="perfect">🏆 滿分名單 (100分)</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:160px;">
+            <select id="teacher-sort-select" onchange="handleTeacherSort()" style="width:100%; padding:0.55rem 0.85rem; border-radius:6px; border:1px solid #cbd5e1; font-size:0.95rem; background:#fff; cursor:pointer;">
+              <option value="time-desc">⏱️ 繳卷時間 (新到舊)</option>
+              <option value="time-asc">⏱️ 繳卷時間 (舊到新)</option>
+              <option value="score-desc">📈 分數排序 (高到低)</option>
+              <option value="score-asc">📉 分數排序 (低到高)</option>
+            </select>
+          </div>
+          <div>
+            <button class="btn btn-secondary btn-sm" onclick="resetTeacherFilters()" style="padding:0.55rem 0.75rem;">🔄 重設篩選</button>
+          </div>
         </div>
 
         <div class="table-responsive">
@@ -318,6 +379,75 @@
       </div>
       <div class="modal-footer" id="json-viewer-footer">
         <button class="btn btn-secondary" onclick="closeJsonViewerModal()">關閉視窗</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Modal for Teacher Authentication -->
+  <div id="teacher-login-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 440px; text-align: center;">
+      <div class="modal-header">
+        <h3>🔐 教師管理身分驗證</h3>
+        <span class="modal-close" onclick="closeTeacherLoginModal()">&times;</span>
+      </div>
+      <div class="modal-body" style="padding: 1.5rem 1.25rem;">
+        <div style="font-size: 2.8rem; margin-bottom: 0.6rem;">🔒</div>
+        <h4 style="color:#1e293b; margin-bottom:0.4rem;">阿長與教學負責人專用</h4>
+        <p style="color: #64748b; font-size: 0.92rem; margin-bottom: 1.2rem; line-height: 1.5;">
+          此區域受權限保護，請輸入管理密碼以解鎖全科成績清單、搜尋工具與 Google 試算表設定。
+        </p>
+        <div class="form-group" style="text-align: left; margin-bottom: 0.5rem;">
+          <label for="teacher-password-input" style="font-weight: 700; color:#334155; display:block; margin-bottom:0.35rem;">管理密碼：</label>
+          <input type="password" id="teacher-password-input" placeholder="請輸入管理密碼 (預設: acls2026)" style="width: 100%; padding: 0.7rem 0.85rem; font-size: 1.05rem; border: 1.5px solid #cbd5e1; border-radius: 6px;" onkeydown="if(event.key==='Enter') verifyTeacherLogin()">
+          <div id="teacher-login-error" style="color: #ef4444; font-size: 0.88rem; margin-top: 0.4rem; display: none; font-weight:600;">❌ 密碼錯誤，請重新輸入！</div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between;">
+        <button class="btn btn-secondary" onclick="closeTeacherLoginModal()">取消</button>
+        <button class="btn btn-primary" onclick="verifyTeacherLogin()">🔓 驗證並解鎖後台</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Changing Teacher Password -->
+  <div id="change-password-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3>🔑 修改教師管理密碼</h3>
+        <span class="modal-close" onclick="closeChangePasswordModal()">&times;</span>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem;">
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label for="new-teacher-password" style="font-weight:700;">新管理密碼：</label>
+          <input type="password" id="new-teacher-password" placeholder="請輸入新管理密碼 (至少 4 碼)" style="width:100%; padding:0.6rem 0.8rem;">
+        </div>
+        <div class="form-group" style="margin-bottom:0.5rem;">
+          <label for="confirm-teacher-password" style="font-weight:700;">再次確認新密碼：</label>
+          <input type="password" id="confirm-teacher-password" placeholder="請再次輸入新密碼" style="width:100%; padding:0.6rem 0.8rem;">
+        </div>
+        <div id="change-pwd-error" style="color: #ef4444; font-size: 0.88rem; margin-top: 0.4rem; display: none; font-weight:600;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeChangePasswordModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveNewTeacherPassword()">💾 儲存新密碼</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Viewing Detailed Student Submission -->
+  <div id="submission-detail-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 860px; max-height: 85vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h3 id="detail-modal-title">📋 同仁完整作答明細檢視</h3>
+        <span class="modal-close" onclick="closeSubmissionDetailModal()">&times;</span>
+      </div>
+      <div class="modal-body" id="detail-modal-body" style="overflow-y: auto; padding: 1.25rem;">
+        <!-- Injected via JS -->
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <span id="detail-modal-summary" style="font-weight:700; color:#1e293b;"></span>
+        <button class="btn btn-secondary" onclick="closeSubmissionDetailModal()">關閉</button>
       </div>
     </div>
   </div>

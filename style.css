@@ -761,3 +761,35 @@ body {
     page-break-inside: avoid;
   }
 }
+
+/* Admin & Search Dashboard Styles */
+.admin-top-bar {
+  transition: all 0.3s ease;
+}
+.stat-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+.search-filter-toolbar select:focus,
+.search-filter-toolbar input:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+.detail-q-card {
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.85rem;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+.detail-q-card.correct {
+  border-left: 4px solid var(--success-color);
+  background: #f0fdf4;
+}
+.detail-q-card.incorrect {
+  border-left: 4px solid var(--danger-color);
+  background: #fef2f2;
+}
