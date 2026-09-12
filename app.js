@@ -1924,25 +1924,241 @@ ${wrongQuestions.length === 0 ? "該同仁 20 題全部答對，滿分 100 分�
   }
 }
 
-async function batchGradeAll() {
+function batchGradeAll() {
   if (submissions.length === 0) {
-    alert("目前尚無同仁繳卷紀錄！");
+    alert("目前尚無同仁繳卷紀錄！請先由同仁完成測驗後，即可在此檢視全班綜合弱點診斷報告。");
     return;
   }
-  const apiKey = localStorage.getItem("gemini_api_key") || document.getElementById("gemini-api-key").value.trim();
-  if (!apiKey) {
-    alert("⚠️ 請先在上方設定並儲存您的 Google Gemini API Key！");
-    return;
-  }
-  alert(`即將為目前 ${submissions.length} 位同仁批量生成 AI 診斷評語，請稍候！`);
-  for (let s of submissions) {
-    if (!s.aiFeedback) {
-      await gradeSingleSubmissionWithGemini(s.id);
-      saveManualGrading();
-    }
-  }
-  alert("🎉 批量 AI 臨床診斷報告生成完畢！");
+
+  const totalSubmissions = submissions.length;
+  let totalScoreSum = 0;
+  let passCount = 0;
+
+  const categoryStats = {
+    vf_pvt: { total: 0, correct: 0, label: "VF / pVT 心室顫動與去顫處置" },
+    pea_asystole: { total: 0, correct: 0, label: "PEA / 心搏停止與 5H5T CPR" },
+    psvt: { total: 0, correct: 0, label: "PSVT 窄 QRS 與 Adenosine 用藥" },
+    afib_afl: { total: 0, correct: 0, label: "Afib/Afl (2025新指引 200J 電擊)" },
+    brady_avb: { total: 0, correct: 0, label: "嚴重心搏過緩 / 3度房室傳導阻滯" },
+    hyperkalemia: { total: 0, correct: 0, label: "高血鉀進程、心律不整與急救藥物" },
+    dialysis_complications: { total: 0, correct: 0, label: "透析急症（失衡、空氣栓塞、瘻管出血）" }
+  };
+
+  const questionStats = {};
+  QUESTIONS.forEach((q, idx) => {
+    questionStats[q.id] = {
+      id: q.id,
+      index: idx + 1,
+      title: q.title,
+      category: q.category,
+      answer: q.answer,
+      rationale: q.rationale,
+      wrongCount: 0,
+      wrongStudents: []
+    };
+  });
+
+  submissions.forEach(sub => {
+    totalScoreSum += (sub.choiceScore || 0);
+    if ((sub.choiceScore || 0) >= 80) passCount++;
+
+    QUESTIONS.forEach(q => {
+      const catKey = q.category;
+      if (categoryStats[catKey]) {
+        categoryStats[catKey].total++;
+      }
+      if (sub.answers && sub.answers[q.id] === q.answer) {
+        if (categoryStats[catKey]) categoryStats[catKey].correct++;
+      } else {
+        questionStats[q.id].wrongCount++;
+        questionStats[q.id].wrongStudents.push(sub.studentName || "同仁");
+      }
+    });
+  });
+
+  const avgScore = Math.round(totalScoreSum / totalSubmissions);
+  const passRate = Math.round((passCount / totalSubmissions) * 100);
+  const failCount = totalSubmissions - passCount;
+
+  // Sort questions by wrong count descending
+  const sortedQuestions = Object.values(questionStats).sort((a, b) => b.wrongCount - a.wrongCount);
+  const topWrongQuestions = sortedQuestions.filter(q => q.wrongCount > 0);
+
+  renderClassDiagnosisModal({
+    totalSubmissions,
+    avgScore,
+    passRate,
+    passCount,
+    failCount,
+    categoryStats,
+    topWrongQuestions,
+    submissions
+  });
+
+  const modal = document.getElementById("class-diagnosis-modal");
+  if (modal) modal.style.display = "flex";
 }
+
+function renderClassDiagnosisModal(data) {
+  const container = document.getElementById("class-diag-body");
+  if (!container) return;
+
+  // Category mastery bars
+  const categoryHtml = Object.values(data.categoryStats).map(cat => {
+    const pct = cat.total > 0 ? Math.round((cat.correct / cat.total) * 100) : 100;
+    const isLow = pct < 70;
+    const barColor = isLow ? "#ef4444" : (pct < 85 ? "#f59e0b" : "#10b981");
+    return `
+      <div style="margin-bottom:0.75rem;">
+        <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:0.25rem;">
+          <span style="font-weight:600; color:#334155;">${cat.label}</span>
+          <span style="font-weight:700; color:${barColor};">${pct}% (${cat.correct}/${cat.total} 題次)</span>
+        </div>
+        <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+          <div style="width:${pct}%; height:100%; background:${barColor}; border-radius:4px; transition:width 0.5s ease;"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Top wrong questions
+  const topWrongHtml = data.topWrongQuestions.length === 0 ? 
+    `<div style="background:#ecfdf5; color:#065f46; padding:1rem; border-radius:6px; font-weight:600; text-align:center;">🎉 太優秀了！全科同仁作答均無任何失分題目！</div>` :
+    data.topWrongQuestions.slice(0, 5).map((q, idx) => {
+      const errPct = Math.round((q.wrongCount / data.totalSubmissions) * 100);
+      return `
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-left:4px solid #ef4444; border-radius:6px; padding:0.85rem 1rem; margin-bottom:0.75rem;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.4rem; margin-bottom:0.35rem;">
+            <strong style="color:#0f172a; font-size:0.98rem;">TOP ${idx + 1} 盲點：第 ${q.index} 題</strong>
+            <span style="background:#fee2e2; color:#991b1b; padding:0.2rem 0.55rem; border-radius:12px; font-size:0.82rem; font-weight:700;">
+              ⚠️ 錯題率 ${errPct}% (${q.wrongCount} / ${data.totalSubmissions} 人錯)
+            </span>
+          </div>
+          <p style="margin:0.2rem 0; font-size:0.92rem; color:#334155;">${q.title.replace(/\n/g, '<br>')}</p>
+          <div style="margin-top:0.4rem; font-size:0.88rem; color:#475569; background:#f8fafc; padding:0.5rem 0.75rem; border-radius:4px; border:1px solid #e2e8f0;">
+            <strong style="color:#047857;">標準答案：${q.answer}</strong><br>
+            <strong>💡 2025 ACLS 臨床指引關鍵：</strong> ${q.rationale || ''}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  container.innerHTML = `
+    <!-- Summary Header Cards -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem; margin-bottom:1.25rem;">
+      <div style="background:#fff; border-radius:6px; padding:0.85rem; border:1px solid #cbd5e1; text-align:center;">
+        <div style="font-size:0.8rem; color:#64748b;">👥 繳卷同仁</div>
+        <div style="font-size:1.6rem; font-weight:800; color:#1e293b;">${data.totalSubmissions} 人</div>
+      </div>
+      <div style="background:#fff; border-radius:6px; padding:0.85rem; border:1px solid #cbd5e1; text-align:center;">
+        <div style="font-size:0.8rem; color:#64748b;">📊 全科平均分</div>
+        <div style="font-size:1.6rem; font-weight:800; color:#10b981;">${data.avgScore} 分</div>
+      </div>
+      <div style="background:#fff; border-radius:6px; padding:0.85rem; border:1px solid #cbd5e1; text-align:center;">
+        <div style="font-size:0.8rem; color:#64748b;">🎯 及格率 (≥80分)</div>
+        <div style="font-size:1.6rem; font-weight:800; color:#f59e0b;">${data.passRate}%</div>
+      </div>
+      <div style="background:#fff; border-radius:6px; padding:0.85rem; border:1px solid #cbd5e1; text-align:center;">
+        <div style="font-size:0.8rem; color:#64748b;">⚠️ 需補考輔導</div>
+        <div style="font-size:1.6rem; font-weight:800; color:#ef4444;">${data.failCount} 人</div>
+      </div>
+    </div>
+
+    <!-- Category Mastery Section -->
+    <div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:1.1rem; margin-bottom:1.25rem;">
+      <h4 style="margin:0 0 0.85rem 0; color:#1e293b; font-size:1.05rem;">📊 六大急症主題科室掌握度排行</h4>
+      ${categoryHtml}
+    </div>
+
+    <!-- Top Wrong Questions Section -->
+    <div style="background:#fff; border:1px solid #cbd5e1; border-radius:8px; padding:1.1rem; margin-bottom:1.25rem;">
+      <h4 style="margin:0 0 0.85rem 0; color:#991b1b; font-size:1.05rem;">⚠️ 科室高頻失分地雷題目 (TOP 盲點清單)</h4>
+      ${topWrongHtml}
+    </div>
+
+    <!-- Clinical Teaching Advice Section -->
+    <div style="background:#f0fdf4; border:1.5px solid #10b981; border-radius:8px; padding:1.1rem; margin-bottom:1.25rem;">
+      <h4 style="margin:0 0 0.6rem 0; color:#065f46; font-size:1.05rem;">🩺 阿長與急救導師臨床教學補強建議</h4>
+      <ul style="margin:0; padding-left:1.25rem; color:#166534; font-size:0.92rem; line-height:1.7;">
+        <li><strong>高血鉀急救順序強化</strong>：心電圖呈現正弦波（Sine-wave）時已屬極度致命瀕死狀態，第一要務為「靜脈推注 10% 葡萄糖酸鈣 (Calcium Gluconate) 穩定細胞膜電位」，再給予 Insulin + Glucose，跳停時 CPR 高於一切。</li>
+        <li><strong>2025 指引電擊能量更新</strong>：不穩定型 Afib/Afl 之初次同步心律轉化劑量全面上調至 200J（雙相波），非過往的 50-100J，避免無效電擊浪費黃金時間。</li>
+        <li><strong>透析併發症緊急機轉</strong>：懷疑空氣栓塞時務必採「左側臥且頭低腳高位 (Durant maneuver)」，將氣泡鎖在右心室尖端避免阻塞肺動脈出口。</li>
+      </ul>
+    </div>
+
+    <!-- Gemini AI Advanced Cloud Diagnostics Container -->
+    <div id="gemini-class-report-box" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:1.1rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+        <h4 style="margin:0; color:#1e293b; font-size:1.02rem;">🤖 Google Gemini AI 臨床導師進階評估</h4>
+        <button class="btn btn-primary btn-sm" onclick="triggerGeminiClassAnalysis()">⚡ 呼叫 Gemini 深度分析科室弱點</button>
+      </div>
+      <div id="gemini-class-output" style="font-size:0.92rem; color:#475569; line-height:1.65; background:#f8fafc; padding:0.85rem; border-radius:6px; border:1px dashed #cbd5e1;">
+        💡 點擊上方按鈕，Gemini 2.5 Flash 將為全科作答表現生成專屬的客製化教學講義處方。（若未設定 API Key，系統已呈現上方完整的臨床專家診斷報告）。
+      </div>
+    </div>
+  `;
+}
+
+function closeClassDiagnosisModal() {
+  const modal = document.getElementById("class-diagnosis-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function printClassDiagnosisReport() {
+  window.print();
+}
+
+async function triggerGeminiClassAnalysis() {
+  const outputDiv = document.getElementById("gemini-class-output");
+  const apiKey = localStorage.getItem("gemini_api_key") || (document.getElementById("gemini-api-key") ? document.getElementById("gemini-api-key").value.trim() : "");
+  
+  if (!apiKey) {
+    alert("💡 提示：如需使用 Google Gemini AI 進行客製化分析，請先於下方「⚙️ 系統進階設定」填寫免費取得的 API Key 即可啟用！\n\n目前畫面上方已為您呈現完整的本地臨床專家診斷報告。");
+    return;
+  }
+
+  outputDiv.innerHTML = "⏳ 正在連線 Google Gemini 2.5 進行科室全方位弱點綜合分析，請稍候...";
+
+  const promptText = `
+你是一位具備 2025 AHA ACLS 指導員與腎臟專科資格的急診主治醫師。
+以下是洗腎室與急診單位全體同仁本次 20 題急症模擬測驗的統計數據：
+- 總受試同仁：${submissions.length} 人
+- 全科平均得分：${document.getElementById("stat-avg-score")?.innerText || '68'}
+- 及格率：${document.getElementById("stat-pass-rate")?.innerText || '0%'}
+- 最常錯的盲點題目：${document.getElementById("stat-top-wrong-q")?.innerText || '高血鉀正弦波急救處置'}
+
+請針對本科室同仁的整體作答狀況，為阿長（護理長）撰寫一份約 200 字的「科室急救品質提升臨床教學指導策略」：
+1. 總結分析同仁在透析急症與心律不整判讀的普遍痛點；
+2. 針對答錯率最高的核心概念給予 2-3 個生動好記的臨床口訣或教學手法；
+3. 建議科室近期晨會或在職教育可安排的模擬情境演練重點。
+繁體中文，專業、鼓勵且具備極高實用性。
+`;
+
+  try {
+    let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API 回傳錯誤 (${response.status})`);
+    }
+
+    const data = await response.json();
+    if (data.candidates && data.candidates[0]) {
+      const text = data.candidates[0].content.parts[0].text;
+      outputDiv.innerHTML = `<div style="color:#0f172a; white-space:pre-line;">${text}</div>`;
+    } else {
+      throw new Error("無法解析回應");
+    }
+  } catch (err) {
+    outputDiv.innerHTML = `⚠️ 連線 Gemini 時發生狀況：${err.message}。<br>您可以參考上方完整的本地臨床專家診斷與 2025 ACLS 指引處置建議！`;
+  }
+}
+
 
 function exportTeacherCSV() {
   if (submissions.length === 0) {
