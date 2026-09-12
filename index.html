@@ -132,174 +132,48 @@
       <!-- Admin Top Action Bar -->
       <div class="admin-top-bar" style="display:flex; justify-content:space-between; align-items:center; background:#1e293b; color:#fff; padding:0.85rem 1.25rem; border-radius:8px; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
         <div style="display:flex; align-items:center; gap:0.75rem;">
-          <span style="background:#10b981; color:#fff; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.85rem; font-weight:700; letter-spacing:0.03em;">🟢 教師管理模式已解鎖</span>
-          <span style="font-size:0.95rem; color:#cbd5e1;">阿長與教學負責人控制台</span>
+          <span style="background:#10b981; color:#fff; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.85rem; font-weight:700;">🟢 管理模式</span>
+          <h2 style="margin:0; font-size:1.15rem; color:#f8fafc;">👨‍⚕️ 教師成績管理與批改中心</h2>
         </div>
-        <div style="display:flex; gap:0.6rem; align-items:center;">
-          <button class="btn btn-secondary btn-sm" onclick="openChangePasswordModal()" style="background:#334155; border-color:#475569; color:#f8fafc;">🔑 變更管理密碼</button>
-          <button class="btn btn-danger btn-sm" onclick="logoutTeacher()">🚪 登出教師模式</button>
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-success btn-sm" onclick="copyGhPagesShareLink()">📋 複製測驗網址傳 LINE</button>
+          <button class="btn btn-primary btn-sm" onclick="exportTeacherCSV()">📥 匯出全班 Excel</button>
+          <button class="btn btn-secondary btn-sm" onclick="openChangePasswordModal()" style="background:#334155; border-color:#475569; color:#f8fafc;">🔑 密碼</button>
+          <button class="btn btn-danger btn-sm" onclick="logoutTeacher()">🚪 登出</button>
         </div>
-      </div>
-
-      <div class="panel-intro">
-        <h2>👨‍⚕️ 教師管理後台與全科成績整理中心</h2>
-        <p>提供同仁作答即時搜尋、及格篩選、科室盲點大數據看板、Google 試算表自動同步，以及 Google Gemini 2.5 臨床弱點診斷報告。</p>
       </div>
 
       <!-- Class Big Data Stats Dashboard -->
-      <div class="stats-overview-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
-        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1.1rem; border-left:4px solid #3b82f6; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+      <div class="stats-overview-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.25rem;">
+        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1rem; border-left:4px solid #3b82f6; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
           <div style="font-size:0.85rem; color:#64748b; font-weight:600;">👥 總測驗人次</div>
-          <div id="stat-total-students" style="font-size:1.9rem; font-weight:800; color:#1e293b; margin-top:0.25rem;">0 人</div>
+          <div id="stat-total-students" style="font-size:1.85rem; font-weight:800; color:#1e293b; margin-top:0.2rem;">0 人</div>
         </div>
-        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1.1rem; border-left:4px solid #10b981; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1rem; border-left:4px solid #10b981; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
           <div style="font-size:0.85rem; color:#64748b; font-weight:600;">📊 科室平均成績</div>
-          <div id="stat-avg-score" style="font-size:1.9rem; font-weight:800; color:#10b981; margin-top:0.25rem;">0 分</div>
+          <div id="stat-avg-score" style="font-size:1.85rem; font-weight:800; color:#10b981; margin-top:0.2rem;">0 分</div>
         </div>
-        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1.1rem; border-left:4px solid #f59e0b; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1rem; border-left:4px solid #f59e0b; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
           <div style="font-size:0.85rem; color:#64748b; font-weight:600;">🎯 及格率 (≥80分)</div>
-          <div id="stat-pass-rate" style="font-size:1.9rem; font-weight:800; color:#f59e0b; margin-top:0.25rem;">0%</div>
+          <div id="stat-pass-rate" style="font-size:1.85rem; font-weight:800; color:#f59e0b; margin-top:0.2rem;">0%</div>
         </div>
-        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1.1rem; border-left:4px solid #ef4444; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-          <div style="font-size:0.85rem; color:#64748b; font-weight:600;">⚠️ 科室最常錯盲點題目</div>
-          <div id="stat-top-wrong-q" style="font-size:1.05rem; font-weight:700; color:#ef4444; margin-top:0.35rem; line-height:1.4;">尚無數據</div>
-        </div>
-      </div>
-
-            <!-- Google Sheets Auto-Collection Card -->
-      <div class="card" style="border: 2px solid #10b981; background: #f0fdf4; margin-bottom: 1.5rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.6rem;">
-          <h3 style="margin:0; color:#065f46;">📊 Google 試算表雲端成績自動收集設定</h3>
-          <span id="sheet-sync-badge" style="background:#e2e8f0; color:#475569; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.85rem; font-weight:700;">⚪ 尚未設定（僅存本機）</span>
-        </div>
-        <p style="font-size:0.92rem; color:#166534; margin-bottom:1rem; line-height:1.6;">
-          <strong>🎯 阿長最愛的自動彙整功能：</strong>設定完成後，全科同仁在手機上只要點擊「交卷」，姓名、員編、100 分總成績、六大急症雷達分析與錯題，將在 1 秒內<strong>自動寫入您的 Google 試算表</strong>，阿長打開試算表就能即時看見全科作答狀況與排行榜！
-        </p>
-
-        <div class="form-row">
-          <div class="form-group flex-2">
-            <label for="google-sheet-url" style="font-weight:700; color:#166534;">Google Apps Script 網頁應用程式網址 (Web App URL)：</label>
-            <input type="text" id="google-sheet-url" placeholder="https://script.google.com/macros/s/AKfycb.../exec" style="background:#fff; border:1px solid #10b981;">
-          </div>
-          <div class="form-group" style="display:flex; gap:0.5rem; align-items:flex-end;">
-            <button class="btn btn-success" onclick="saveGoogleSheetUrl()">💾 儲存並啟用</button>
-            <button class="btn btn-secondary" onclick="testGoogleSheetSync()">🧪 傳送測試資料</button>
-          </div>
-        </div>
-
-        <details style="margin-top:1rem; background:#ffffff; padding:0.8rem 1rem; border-radius:6px; border:1px solid #a7f3d0;">
-          <summary style="font-weight:700; color:#047857; cursor:pointer; font-size:0.95rem;">👉 點此展開「30 秒 Google 試算表串接教學」與「10 行小腳本」</summary>
-          <div style="margin-top:0.8rem; font-size:0.9rem; color:#1e293b; line-height:1.65;">
-            <ol style="padding-left:1.2rem; margin-bottom:0.8rem;">
-              <li>打開您的 <strong>Google 雲端硬碟</strong> ➔ 新增一張 <strong>Google 試算表</strong>（命名為例如：<code>ACLS 透析急症測驗同仁成績總表</code>）。</li>
-              <li>點擊頂部選單的 <strong>「擴充功能」</strong> ➔ <strong>「Apps Script」</strong>。</li>
-              <li>把裡面的內容清空，<strong>貼上下方的 10 行小腳本</strong>，按 💾 儲存。</li>
-              <li>點擊右上角藍色 <strong>「部署」</strong> ➔ <strong>「新部署」</strong>：
-                <ul>
-                  <li>種類選擇：<strong>網頁應用程式 (Web app)</strong></li>
-                  <li>誰可以存取 (Who has access)：請務必選 <strong>「所有人 (Anyone)」</strong></li>
-                </ul>
-              </li>
-              <li>點擊「部署」➔ 複製產生的 <strong>「網頁應用程式網址」</strong> 貼回上方格子，按「💾 儲存並啟用」即大功告成！</li>
-            </ol>
-            <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:0.8rem; position:relative;">
-              <strong style="color:#0f172a;">📋 複製這段 Apps Script 腳本：</strong>
-              <pre style="margin:0.5rem 0 0 0; font-family:Consolas, monospace; font-size:0.82rem; overflow-x:auto; background:#1e293b; color:#f8fafc; padding:0.75rem; border-radius:4px;">function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["繳卷時間", "同仁姓名", "員編/單位", "測驗得分", "答對題數", "錯題清單", "VF/pVT", "PSVT", "Afib/Afl", "Brady/AVB", "高血鉀", "透析急症"]);
-    sheet.getRange(1, 1, 1, 12).setFontWeight("bold").setBackground("#d1fae5");
-  }
-  var data = JSON.parse(e.postData.contents);
-  sheet.appendRow([
-    data.timestamp, data.studentName, data.studentId, data.choiceScore,
-    data.correctCount, data.wrongList, data.vfScore, data.psvtScore,
-    data.afibScore, data.bradyScore, data.hyperKScore, data.dialysisScore
-  ]);
-  return ContentService.createTextOutput(JSON.stringify({result: "success"})).setMimeType(ContentService.MimeType.JSON);
-}</pre>
-            </div>
-          </div>
-        </details>
-      </div>
-      <!-- Teacher Controls Card -->
-      <div class="card admin-settings-card">
-        <h3>⚙️ API 設定與派卷工具</h3>
-        <div class="form-row">
-          <div class="form-group flex-2">
-            <label for="gemini-api-key">Google Gemini API Key（支援 1.5 Flash / Pro 智能診斷）：</label>
-            <input type="password" id="gemini-api-key" placeholder="貼上 AI Studio 取得之 Gemini API Key (AIzaSy...)">
-            <small style="display:block; margin-top:0.3rem;">
-              🔑 <strong>如何取得？</strong> 請至 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary-color); font-weight:700; text-decoration:underline;">Google AI Studio 官網 (點此開啟)</a> 免費申請（登入 Google 帳號 ➔ 點「Get API key」複製貼上）。<br>
-              💡 <em>小提醒：完全免費！若暫不設定也不影響任何測驗、評分、心電圖示波器與 Excel 匯出功能。</em>
-            </small>
-          </div>
-          <div class="form-group">
-            <label>&nbsp;</label>
-            <button class="btn btn-secondary" onclick="saveApiKey()">💾 儲存金鑰</button>
-          </div>
-        </div>
-
-        <div class="dispatch-box">
-          <h4>🔗 專屬派卷網址（同仁如何打開測驗）</h4>
-          
-          <div class="form-group" style="margin-bottom:1rem; background:#ecfdf5; padding:0.85rem; border-radius:8px; border:1.5px solid #10b981;">
-            <label style="color:#065f46; font-size:1rem;"><strong>🌟 雲端正式派卷網址（推薦！同仁手機 LINE、4G/5G、院外隨時可點開測驗）：</strong></label>
-            <div class="input-with-button" style="margin-top:0.35rem;">
-              <input type="text" id="gh-pages-share-link" value="https://pink035980-create.github.io/acls-dialysis-quiz/" readonly style="background:#ffffff; font-weight:700; color:#065f46; border:1px solid #10b981;">
-              <button class="btn btn-success" onclick="copyGhPagesShareLink()">📋 複製正式公開網址傳 LINE</button>
-            </div>
-          </div>
-
-          <div class="form-group" style="margin-bottom:0.85rem;">
-            <label><strong>📶 同一 Wi-Fi / 醫院區域網路派卷網址（同仁手機連線同個 Wi-Fi 開啟）：</strong></label>
-            <div class="input-with-button">
-              <input type="text" id="wifi-share-link" value="http://192.168.11.50:8088/" readonly style="background:#f8fafc; color:#334155;">
-              <button class="btn btn-secondary" onclick="copyWifiShareLink()">📋 複製區網網址</button>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label><strong>💻 本機測試網址（僅限您目前這台電腦自己測試）：</strong></label>
-            <div class="input-with-button">
-              <input type="text" id="share-link-input" readonly>
-              <button class="btn btn-secondary" onclick="copyShareLink()">📋 複製本機網址</button>
-            </div>
-          </div>
-
-          <div style="background:#fffbeb; border:1px solid #fef3c7; border-radius:6px; padding:0.75rem; margin-top:0.75rem; font-size:0.88rem; color:#92400e;">
-            ⚠️ <strong>為什麼之前傳 localhost 給別人打不開？</strong><br>
-            <code>localhost</code> 代表「這台電腦自己」，傳給同事或手機點開時會連線到同事自己的設備，因此連線失敗。<br>
-            👉 <strong>請複製上方的「同 Wi-Fi 派卷網址」發送給同事</strong>！只要手機連在相同 Wi-Fi 或院內網路上即可順利打開。<br>
-            🌐 <em>若同事在家中或使用 4G/5G 行動網路（非同一個 Wi-Fi），我們可一鍵為您發布至免費雲端公開網址（如 GitHub Pages / Vercel）。</em>
-          </div>
-        </div>
-
-        <div class="export-box">
-          <h4>📊 全班成績報表匯出與備份讀取</h4>
-          <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center;">
-            <button class="btn btn-success" onclick="exportTeacherCSV()">📥 匯出全班成績表 (Excel CSV - 點擊直接開啟)</button>
-            <label class="btn btn-primary" style="margin:0; cursor:pointer;">
-              📂 線上讀取已下載的 JSON 備份檔
-              <input type="file" accept=".json" style="display:none;" onchange="viewUploadedJSON(this)">
-            </label>
-            <button class="btn btn-secondary" onclick="exportTeacherJSON()">💾 匯出系統備份檔 (JSON)</button>
-            <button class="btn btn-danger btn-sm" onclick="clearAllSubmissions()">🗑️ 清空所有紀錄</button>
-          </div>
-          <small style="display:block; margin-top:0.5rem; color:#64748b;">
-            💡 提示：若您之前已下載過 <code>.json</code> 檔案，不需要打開 Cloud Code，直接點擊上方「📂 線上讀取已下載的 JSON 備份檔」選取檔案，即可在網頁中完整閱覽！
-          </small>
+        <div class="stat-card" style="background:#fff; border-radius:8px; padding:1rem; border-left:4px solid #ef4444; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          <div style="font-size:0.85rem; color:#64748b; font-weight:600;">⚠️ 最常錯盲點題目</div>
+          <div id="stat-top-wrong-q" style="font-size:1rem; font-weight:700; color:#ef4444; margin-top:0.3rem; line-height:1.4;">尚無數據</div>
         </div>
       </div>
 
-      <!-- Submissions List with Search & Filters -->
-      <div class="card submissions-card">
-        <div class="submissions-header" style="flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem;">
+      <!-- MAIN SECTION: Submissions List with Search & Filters -->
+      <div class="card submissions-card" style="margin-bottom:1.5rem;">
+        <div class="submissions-header" style="flex-wrap:wrap; gap:0.75rem; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <h3 style="margin:0;">📋 同仁測驗作答清單 (<span id="submission-count">0</span> 筆紀錄)</h3>
+            <h3 style="margin:0; font-size:1.2rem;">📋 同仁測驗作答清單 (<span id="submission-count">0</span> 筆紀錄)</h3>
             <span id="search-result-hint" style="font-size:0.85rem; color:#64748b;">顯示符合條件的成績清單</span>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="batchGradeAll()">⚡ 一鍵呼叫 Gemini AI 生成科室弱點綜合報告</button>
+          <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" onclick="batchGradeAll()">⚡ 一鍵呼叫 Gemini AI 班級弱點綜合診斷</button>
+            <button class="btn btn-success btn-sm" onclick="exportTeacherCSV()">📥 匯出全班 Excel</button>
+          </div>
         </div>
 
         <!-- Search & Filter Toolbar -->
@@ -324,7 +198,7 @@
             </select>
           </div>
           <div>
-            <button class="btn btn-secondary btn-sm" onclick="resetTeacherFilters()" style="padding:0.55rem 0.75rem;">🔄 重設篩選</button>
+            <button class="btn btn-secondary btn-sm" onclick="resetTeacherFilters()" style="padding:0.55rem 0.75rem;">🔄 重設</button>
           </div>
         </div>
 
@@ -347,6 +221,82 @@
           </table>
         </div>
       </div>
+
+      <!-- COLLAPSIBLE ADVANCED SETTINGS ACCORDION -->
+      <details class="card" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:0.85rem 1.25rem; margin-bottom:2rem; cursor:pointer;">
+        <summary style="font-weight:700; font-size:1.02rem; color:#334155; display:flex; justify-content:space-between; align-items:center; user-select:none;">
+          <span>⚙️ 系統進階設定（Google 試算表串接 / API Key / 備份管理）</span>
+          <span style="font-size:0.85rem; color:#64748b; font-weight:normal;">[點此展開設定]</span>
+        </summary>
+        
+        <div style="cursor:default; padding-top:1.25rem;">
+          <!-- Google Sheets Setting -->
+          <div style="background:#ffffff; border:1.5px solid #10b981; border-radius:8px; padding:1rem 1.25rem; margin-bottom:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem;">
+              <h4 style="margin:0; color:#065f46;">📊 Google 試算表雲端自動收集設定</h4>
+              <span id="sheet-sync-badge" style="background:#e2e8f0; color:#475569; padding:0.2rem 0.65rem; border-radius:20px; font-size:0.8rem; font-weight:700;">⚪ 尚未設定（僅存本機）</span>
+            </div>
+            <p style="font-size:0.88rem; color:#166534; margin-bottom:0.75rem;">
+              設定 Web App URL 後，全科同仁手機交卷將在 1 秒內自動寫入您的 Google 試算表。
+            </p>
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <input type="text" id="google-sheet-url" placeholder="https://script.google.com/macros/s/AKfycb.../exec" style="background:#fff; border:1px solid #10b981; width:100%; padding:0.55rem 0.75rem; font-size:0.92rem; border-radius:4px;">
+              </div>
+              <div class="form-group" style="display:flex; gap:0.5rem; align-items:flex-end;">
+                <button class="btn btn-success btn-sm" onclick="saveGoogleSheetUrl()">💾 儲存啟用</button>
+                <button class="btn btn-secondary btn-sm" onclick="testGoogleSheetSync()">🧪 測試傳送</button>
+              </div>
+            </div>
+            <details style="margin-top:0.75rem; font-size:0.85rem; color:#475569;">
+              <summary style="cursor:pointer; color:#047857; font-weight:600;">👉 點此查看「10 行 Apps Script 接收小腳本」與教學</summary>
+              <pre style="margin:0.5rem 0 0 0; font-family:Consolas, monospace; font-size:0.8rem; background:#1e293b; color:#f8fafc; padding:0.75rem; border-radius:4px; overflow-x:auto;">function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["繳卷時間", "同仁姓名", "員編/單位", "測驗得分", "答對題數", "錯題清單", "VF/pVT", "PSVT", "Afib/Afl", "Brady/AVB", "高血鉀", "透析急症"]);
+    sheet.getRange(1, 1, 1, 12).setFontWeight("bold").setBackground("#d1fae5");
+  }
+  var data = JSON.parse(e.postData.contents);
+  sheet.appendRow([
+    data.timestamp, data.studentName, data.studentId, data.choiceScore,
+    data.correctCount, data.wrongList, data.vfScore, data.psvtScore,
+    data.afibScore, data.bradyScore, data.hyperKScore, data.dialysisScore
+  ]);
+  return ContentService.createTextOutput(JSON.stringify({result: "success"})).setMimeType(ContentService.MimeType.JSON);
+}</pre>
+            </details>
+          </div>
+
+          <!-- API Key Setting -->
+          <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:1rem 1.25rem; margin-bottom:1.25rem;">
+            <h4 style="margin:0 0 0.5rem 0; color:#334155;">🔑 Google Gemini API Key 設定（AI 智能深度診斷 - 選用）</h4>
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <input type="password" id="gemini-api-key" placeholder="貼上 AI Studio 取得之 Gemini API Key (AIzaSy...)" style="width:100%; padding:0.55rem 0.75rem; font-size:0.92rem; border-radius:4px; border:1px solid #cbd5e1;">
+              </div>
+              <div class="form-group">
+                <button class="btn btn-secondary btn-sm" onclick="saveApiKey()">💾 儲存金鑰</button>
+              </div>
+            </div>
+            <small style="color:#64748b;">
+              若需啟用 Gemini AI 臨床弱點分析報告可至 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary-color); text-decoration:underline;">Google AI Studio</a> 免費取得。未設定不影響正常測驗與成績統計。
+            </small>
+          </div>
+
+          <!-- Backup & Other Utilities -->
+          <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:1rem 1.25rem;">
+            <h4 style="margin:0 0 0.5rem 0; color:#334155;">💾 資料檔案備份與歷史紀錄管理</h4>
+            <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center;">
+              <label class="btn btn-secondary btn-sm" style="margin:0; cursor:pointer;">
+                📂 讀取已下載的 JSON 備份檔
+                <input type="file" accept=".json" style="display:none;" onchange="viewUploadedJSON(this)">
+              </label>
+              <button class="btn btn-secondary btn-sm" onclick="exportTeacherJSON()">💾 匯出系統備份檔 (JSON)</button>
+              <button class="btn btn-danger btn-sm" onclick="clearAllSubmissions()">🗑️ 清空所有成績紀錄</button>
+            </div>
+          </div>
+        </div>
+      </details>
     </section>
   </main>
 
