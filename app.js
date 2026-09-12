@@ -2317,3 +2317,159 @@ function sendSubmissionToGoogleSheet(record) {
     console.warn("Google Sheet sync error:", err);
   });
 }
+
+
+// -------------------------------------------------------------
+// CLASS-WIDE RADAR CHART ANALYSIS ENGINE
+// -------------------------------------------------------------
+let classRadarChartInstance = null;
+
+function openClassRadarModal() {
+  if (!submissions || submissions.length === 0) {
+    alert("目前尚無同仁繳卷紀錄！請先讓同仁完成測驗後，即可產生全班雷達圖分析。");
+    return;
+  }
+
+  const modal = document.getElementById("class-radar-modal");
+  const countSpan = document.getElementById("class-radar-student-count");
+  if (countSpan) countSpan.innerText = submissions.length;
+
+  const categoryStats = {
+    vf_pvt: { total: 0, correct: 0, label: "VF/pVT 心室顫動去顫" },
+    pea_asystole: { total: 0, correct: 0, label: "PEA/Asystole 高品質CPR" },
+    psvt: { total: 0, correct: 0, label: "PSVT 窄QRS與用藥" },
+    afib_afl: { total: 0, correct: 0, label: "Afib/Afl (200J 電擊)" },
+    brady_avb: { total: 0, correct: 0, label: "心搏過緩 / 3度AVB" },
+    hyperkalemia: { total: 0, correct: 0, label: "高血鉀進程與急救" },
+    dialysis_complications: { total: 0, correct: 0, label: "透析急症處置" }
+  };
+
+  submissions.forEach(sub => {
+    QUESTIONS.forEach(q => {
+      const catKey = q.category;
+      if (categoryStats[catKey]) {
+        categoryStats[catKey].total++;
+        if (sub.answers && sub.answers[q.id] === q.answer) {
+          categoryStats[catKey].correct++;
+        }
+      }
+    });
+  });
+
+  const labels = Object.values(categoryStats).map(c => c.label);
+  const dataValues = Object.values(categoryStats).map(c => c.total > 0 ? Math.round((c.correct / c.total) * 100) : 100);
+
+  if (modal) modal.style.display = "flex";
+
+  setTimeout(() => {
+    const canvas = document.getElementById("classRadarChartCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (classRadarChartInstance) classRadarChartInstance.destroy();
+
+    classRadarChartInstance = new Chart(ctx, {
+      type: "radar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "全班平均掌握度 (%)",
+          data: dataValues,
+          backgroundColor: "rgba(16, 185, 129, 0.22)",
+          borderColor: "#10b981",
+          pointBackgroundColor: "#059669",
+          pointBorderColor: "#fff",
+          pointHoverBackgroundColor: "#fff",
+          pointHoverBorderColor: "#059669",
+          borderWidth: 2.5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+          r: {
+            angleLines: { color: "rgba(0,0,0,0.12)" },
+            grid: { color: "rgba(0,0,0,0.08)" },
+            suggestedMin: 0,
+            suggestedMax: 100,
+            ticks: { stepSize: 20, font: { size: 10 } },
+            pointLabels: { font: { size: 11, weight: "bold" }, color: "#1e293b" }
+          }
+        },
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { font: { weight: "bold", size: 12 } }
+          }
+        }
+      }
+    });
+
+    // Render detailed table
+    const tableContainer = document.getElementById("class-radar-table-container");
+    if (tableContainer) {
+      let tableHtml = `
+        <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+          <thead>
+            <tr style="border-bottom:1.5px solid #cbd5e1; text-align:left; color:#475569;">
+              <th style="padding:0.45rem 0.5rem;">急症主題</th>
+              <th style="padding:0.45rem 0.5rem;">答對題次 / 總題次</th>
+              <th style="padding:0.45rem 0.5rem;">全班平均掌握度</th>
+              <th style="padding:0.45rem 0.5rem;">臨床教學評定</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      let lowestCat = null;
+      let lowestPct = 101;
+
+      Object.values(categoryStats).forEach(c => {
+        const pct = c.total > 0 ? Math.round((c.correct / c.total) * 100) : 100;
+        if (pct < lowestPct) {
+          lowestPct = pct;
+          lowestCat = c;
+        }
+
+        let badge = `<span style="color:#166534; font-weight:700;">🟢 優異 (>=85%)</span>`;
+        if (pct < 70) {
+          badge = `<span style="color:#991b1b; font-weight:700;">🔴 待加強 (<70%)</span>`;
+        } else if (pct < 85) {
+          badge = `<span style="color:#92400e; font-weight:700;">🟡 尚可 (70-84%)</span>`;
+        }
+
+        tableHtml += `
+          <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:0.45rem 0.5rem; font-weight:600; color:#1e293b;">${c.label}</td>
+            <td style="padding:0.45rem 0.5rem; color:#64748b;">${c.correct} / ${c.total} 題次</td>
+            <td style="padding:0.45rem 0.5rem;"><strong style="font-size:0.95rem; color:${pct < 70 ? '#ef4444' : (pct < 85 ? '#f59e0b' : '#10b981')};">${pct}%</strong></td>
+            <td style="padding:0.45rem 0.5rem;">${badge}</td>
+          </tr>
+        `;
+      });
+
+      tableHtml += `</tbody></table>`;
+      tableContainer.innerHTML = tableHtml;
+
+      const alertBox = document.getElementById("class-radar-weakness-alert");
+      if (alertBox) {
+        if (lowestCat && lowestPct < 85) {
+          alertBox.innerHTML = `⚠️ <strong>阿長教學雷達焦點：</strong> 全班雷達圖在「<strong>${lowestCat.label}</strong>」呈現明顯凹陷（掌握度僅 <strong>${lowestPct}%</strong>），建議於下次在職教育或晨會中特別安排該主題的急救情境演練！`;
+          alertBox.style.display = "block";
+        } else {
+          alertBox.innerHTML = `🌟 <strong>科室表現卓越：</strong> 全體同仁於各急症主題均達到 85% 以上的高標準掌握度，急救觀念非常扎實！`;
+          alertBox.style.display = "block";
+        }
+      }
+    }
+  }, 150);
+}
+
+function closeClassRadarModal() {
+  const modal = document.getElementById("class-radar-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function printClassRadarReport() {
+  window.print();
+}
