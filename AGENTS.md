@@ -26,3 +26,4 @@
 - [x] Google Gemini 2.5 臨床 AI 弱點診斷報告（支援動態端點探索）
 - [x] 雲端 GitHub Pages 自動部屬（支援手機 4G/5G、院外網路與 LINE 點擊即測）
 - [x] Google 試算表 (Google Sheets Apps Script) 雲端成績自動收集後台
+- [x] 教師管理後台密碼鎖定、全科成績即時搜尋、及格篩選與盲點大數據看板
