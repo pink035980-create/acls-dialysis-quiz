@@ -2320,102 +2320,69 @@ function sendSubmissionToGoogleSheet(record) {
 
 
 // -------------------------------------------------------------
-// CLASS-WIDE RADAR CHART ANALYSIS ENGINE
+// CLASS-WIDE RADAR CHART ANALYSIS ENGINE (FAIL-SAFE & ZERO-CACHE)
 // -------------------------------------------------------------
 let classRadarChartInstance = null;
 
-function openClassRadarModal() {
-  if (!submissions || submissions.length === 0) {
-    alert("目前尚無同仁繳卷紀錄！請先讓同仁完成測驗後，即可產生全班雷達圖分析。");
+window.openClassRadarModal = function() {
+  const modal = document.getElementById("class-radar-modal");
+  if (!modal) {
+    alert("系統提示：找不到全班雷達圖彈窗元素。");
     return;
   }
 
-  const modal = document.getElementById("class-radar-modal");
+  // 1. Immediately display the modal
+  modal.style.display = "flex";
+
   const countSpan = document.getElementById("class-radar-student-count");
-  if (countSpan) countSpan.innerText = submissions.length;
+  const studentCount = (submissions && submissions.length) ? submissions.length : 0;
+  if (countSpan) countSpan.innerText = studentCount;
 
-  const categoryStats = {
-    vf_pvt: { total: 0, correct: 0, label: "VF/pVT 心室顫動去顫" },
-    pea_asystole: { total: 0, correct: 0, label: "PEA/Asystole 高品質CPR" },
-    psvt: { total: 0, correct: 0, label: "PSVT 窄QRS與用藥" },
-    afib_afl: { total: 0, correct: 0, label: "Afib/Afl (200J 電擊)" },
-    brady_avb: { total: 0, correct: 0, label: "心搏過緩 / 3度AVB" },
-    hyperkalemia: { total: 0, correct: 0, label: "高血鉀進程與急救" },
-    dialysis_complications: { total: 0, correct: 0, label: "透析急症處置" }
-  };
+  const tableContainer = document.getElementById("class-radar-table-container");
+  const alertBox = document.getElementById("class-radar-weakness-alert");
 
-  submissions.forEach(sub => {
-    QUESTIONS.forEach(q => {
-      const catKey = q.category;
-      if (categoryStats[catKey]) {
-        categoryStats[catKey].total++;
+  if (!submissions || submissions.length === 0) {
+    if (tableContainer) {
+      tableContainer.innerHTML = '<div style="padding:2rem; text-align:center; color:#64748b; font-size:1rem;">目前尚無同仁繳卷紀錄！請先讓同仁完成測驗後，系統將自動繪製全班急症雷達圖。</div>';
+    }
+    if (alertBox) alertBox.style.display = "none";
+    return;
+  }
+
+  try {
+    const categoryStats = {
+      vf_pvt: { total: 0, correct: 0, label: "VF / pVT 心室顫動" },
+      pea_asystole: { total: 0, correct: 0, label: "PEA / 心搏停止" },
+      psvt: { total: 0, correct: 0, label: "PSVT 上室速" },
+      afib_afl: { total: 0, correct: 0, label: "Afib/Afl (200J)" },
+      brady_avb: { total: 0, correct: 0, label: "嚴重心搏過緩/AVB" },
+      hyperkalemia: { total: 0, correct: 0, label: "高血鉀進程與用藥" },
+      dialysis_complications: { total: 0, correct: 0, label: "透析急症處置" }
+    };
+
+    submissions.forEach(sub => {
+      QUESTIONS.forEach(q => {
+        const cat = categoryStats[q.category] || categoryStats.dialysis_complications;
+        cat.total++;
         if (sub.answers && sub.answers[q.id] === q.answer) {
-          categoryStats[catKey].correct++;
+          cat.correct++;
         }
-      }
+      });
     });
-  });
 
-  const labels = Object.values(categoryStats).map(c => c.label);
-  const dataValues = Object.values(categoryStats).map(c => c.total > 0 ? Math.round((c.correct / c.total) * 100) : 100);
-
-  if (modal) modal.style.display = "flex";
-
-  setTimeout(() => {
-    const canvas = document.getElementById("classRadarChartCanvas");
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (classRadarChartInstance) classRadarChartInstance.destroy();
-
-    classRadarChartInstance = new Chart(ctx, {
-      type: "radar",
-      data: {
-        labels: labels,
-        datasets: [{
-          label: "全班平均掌握度 (%)",
-          data: dataValues,
-          backgroundColor: "rgba(16, 185, 129, 0.22)",
-          borderColor: "#10b981",
-          pointBackgroundColor: "#059669",
-          pointBorderColor: "#fff",
-          pointHoverBackgroundColor: "#fff",
-          pointHoverBorderColor: "#059669",
-          borderWidth: 2.5
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        scales: {
-          r: {
-            angleLines: { color: "rgba(0,0,0,0.12)" },
-            grid: { color: "rgba(0,0,0,0.08)" },
-            suggestedMin: 0,
-            suggestedMax: 100,
-            ticks: { stepSize: 20, font: { size: 10 } },
-            pointLabels: { font: { size: 11, weight: "bold" }, color: "#1e293b" }
-          }
-        },
-        plugins: {
-          legend: {
-            position: "bottom",
-            labels: { font: { weight: "bold", size: 12 } }
-          }
-        }
-      }
-    });
+    const labels = Object.values(categoryStats).map(c => c.label);
+    const dataValues = Object.values(categoryStats).map(c => c.total > 0 ? Math.round((c.correct / c.total) * 100) : 100);
 
     // Render detailed table
-    const tableContainer = document.getElementById("class-radar-table-container");
     if (tableContainer) {
       let tableHtml = `
-        <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
           <thead>
             <tr style="border-bottom:1.5px solid #cbd5e1; text-align:left; color:#475569;">
-              <th style="padding:0.45rem 0.5rem;">急症主題</th>
-              <th style="padding:0.45rem 0.5rem;">答對題次 / 總題次</th>
-              <th style="padding:0.45rem 0.5rem;">全班平均掌握度</th>
-              <th style="padding:0.45rem 0.5rem;">臨床教學評定</th>
+              <th style="padding:0.5rem;">急症主題</th>
+              <th style="padding:0.5rem;">答對題次 / 總題次</th>
+              <th style="padding:0.5rem;">全班平均掌握度</th>
+              <th style="padding:0.5rem;">臨床教學評定</th>
             </tr>
           </thead>
           <tbody>
@@ -2440,10 +2407,10 @@ function openClassRadarModal() {
 
         tableHtml += `
           <tr style="border-bottom:1px solid #f1f5f9;">
-            <td style="padding:0.45rem 0.5rem; font-weight:600; color:#1e293b;">${c.label}</td>
-            <td style="padding:0.45rem 0.5rem; color:#64748b;">${c.correct} / ${c.total} 題次</td>
-            <td style="padding:0.45rem 0.5rem;"><strong style="font-size:0.95rem; color:${pct < 70 ? '#ef4444' : (pct < 85 ? '#f59e0b' : '#10b981')};">${pct}%</strong></td>
-            <td style="padding:0.45rem 0.5rem;">${badge}</td>
+            <td style="padding:0.5rem; font-weight:600; color:#1e293b;">${c.label}</td>
+            <td style="padding:0.5rem; color:#64748b;">${c.correct} / ${c.total} 題次</td>
+            <td style="padding:0.5rem;"><strong style="font-size:1.05rem; color:${pct < 70 ? '#ef4444' : (pct < 85 ? '#f59e0b' : '#10b981')};">${pct}%</strong></td>
+            <td style="padding:0.5rem;">${badge}</td>
           </tr>
         `;
       });
@@ -2451,25 +2418,75 @@ function openClassRadarModal() {
       tableHtml += `</tbody></table>`;
       tableContainer.innerHTML = tableHtml;
 
-      const alertBox = document.getElementById("class-radar-weakness-alert");
       if (alertBox) {
         if (lowestCat && lowestPct < 85) {
-          alertBox.innerHTML = `⚠️ <strong>阿長教學雷達焦點：</strong> 全班雷達圖在「<strong>${lowestCat.label}</strong>」呈現明顯凹陷（掌握度僅 <strong>${lowestPct}%</strong>），建議於下次在職教育或晨會中特別安排該主題的急救情境演練！`;
+          alertBox.innerHTML = `⚠️ <strong>阿長教學雷達焦點：</strong> 全班雷達圖在「<strong>${lowestCat.label}</strong>」呈現明顯凹陷（掌握度僅 <strong>${lowestPct}%</strong>），建議於下次在職教育或晨會中特別安排該主題的急救案例演練！`;
           alertBox.style.display = "block";
         } else {
-          alertBox.innerHTML = `🌟 <strong>科室表現卓越：</strong> 全體同仁於各急症主題均達到 85% 以上的高標準掌握度，急救觀念非常扎實！`;
+          alertBox.innerHTML = `🌟 <strong>科室表現卓越：</strong> 全體同仁於各急症主題均達到 85% 以上的高標準掌握度，臨床急救觀念非常紮實！`;
           alertBox.style.display = "block";
         }
       }
     }
-  }, 150);
-}
 
-function closeClassRadarModal() {
+    // Render Radar Chart with Chart.js
+    setTimeout(() => {
+      try {
+        const canvas = document.getElementById("classRadarChartCanvas");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (classRadarChartInstance) {
+          classRadarChartInstance.destroy();
+        }
+
+        classRadarChartInstance = new Chart(ctx, {
+          type: "radar",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: "全班平均掌握度 (%)",
+              data: dataValues,
+              backgroundColor: "rgba(16, 185, 129, 0.22)",
+              borderColor: "#10b981",
+              pointBackgroundColor: "#059669",
+              pointBorderColor: "#fff",
+              pointHoverBackgroundColor: "#fff",
+              pointHoverBorderColor: "#059669",
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              r: {
+                angleLines: { color: "rgba(0,0,0,0.1)" },
+                grid: { color: "rgba(0,0,0,0.08)" },
+                suggestedMin: 0,
+                suggestedMax: 100,
+                ticks: { stepSize: 20 }
+              }
+            },
+            plugins: {
+              legend: { display: false }
+            }
+          }
+        });
+      } catch (chartErr) {
+        console.warn("Chart.js render warning:", chartErr);
+      }
+    }, 100);
+
+  } catch (err) {
+    console.error("openClassRadarModal error:", err);
+    alert("開啟全班雷達圖時發生錯誤：" + err.message);
+  }
+};
+
+window.closeClassRadarModal = function() {
   const modal = document.getElementById("class-radar-modal");
   if (modal) modal.style.display = "none";
-}
+};
 
-function printClassRadarReport() {
+window.printClassRadarReport = function() {
   window.print();
-}
+};
